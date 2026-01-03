@@ -2,7 +2,7 @@
 "use client";
 import axios from "axios";
 import { useCookies } from "next-client-cookies";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState } from "react";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -21,10 +21,16 @@ interface ApiContextProps {
     data: unknown,
     auth: boolean,
   ) => Promise<{ status: number; body: any }>;
+  PatchAPI: (
+    url: string,
+    data: unknown,
+    auth: boolean,
+  ) => Promise<{ status: number; body: any }>;
   DeleteAPI: (
     url: string,
     auth: boolean,
   ) => Promise<{ status: number; body: any }>;
+  setToken: (token: string) => void;
 }
 
 const ApiContext = createContext<ApiContextProps | undefined>(undefined);
@@ -35,23 +41,30 @@ interface ProviderProps {
 
 export const ApiContextProvider = ({ children }: ProviderProps) => {
   const cookies = useCookies();
-
-  const token = cookies.get(process.env.NEXT_PUBLIC_USER_TOKEN as string);
+  const [token, setTokenState] = useState<string | undefined>(cookies.get("token"));
 
   const api = axios.create({
     baseURL,
   });
 
+  const setToken = (newToken: string) => {
+      setTokenState(newToken);
+      // Ensure cookie is also synced if not already
+      cookies.set("token", newToken); 
+  };
+
   function config(auth: boolean) {
+    // Attempt to get from state, fallback to cookie (for initial load consistency)
+    const currentToken = token || cookies.get("token");
     return {
       headers: {
-        Authorization: auth ? `Bearer ${token}` : "",
+        Authorization: auth ? `Bearer ${currentToken}` : "",
         "ngrok-skip-browser-warning": "any",
       },
     };
   }
 
-  async function PostAPI(url: string, data: unknown, auth: boolean) {
+   async function PostAPI(url: string, data: unknown, auth: boolean) {
     const connect = await api
       .post(url, data, config(auth))
       .then(({ data }) => {
@@ -61,17 +74,12 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
         };
       })
       .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
+        const message = err.response?.data || "Erro desconhecido";
+        const status = err.response?.status || 500;
         return { status, body: message };
       });
 
-    return connect.status === 500
-      ? {
-          status: connect.status,
-          body: "Ops! algo deu errado, tente novamente",
-        }
-      : connect;
+    return connect;
   }
 
   async function GetAPI(url: string, auth: boolean) {
@@ -84,17 +92,12 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
         };
       })
       .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
+        const message = err.response?.data || "Erro desconhecido";
+        const status = err.response?.status || 500;
         return { status, body: message };
       });
 
-    return connect.status === 500
-      ? {
-          status: connect.status,
-          body: "Ops! algo deu errado, tente novamente",
-        }
-      : connect;
+    return connect;
   }
 
   async function PutAPI(url: string, data: unknown, auth: boolean) {
@@ -107,17 +110,12 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
         };
       })
       .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
+        const message = err.response?.data || "Erro desconhecido";
+        const status = err.response?.status || 500;
         return { status, body: message };
       });
 
-    return connect.status === 500
-      ? {
-          status: connect.status,
-          body: "Ops! algo deu errado, tente novamente",
-        }
-      : connect;
+    return connect;
   }
 
   async function DeleteAPI(url: string, auth: boolean) {
@@ -130,17 +128,30 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
         };
       })
       .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
+        const message = err.response?.data || "Erro desconhecido";
+        const status = err.response?.status || 500;
         return { status, body: message };
       });
 
-    return connect.status === 500
-      ? {
-          status: connect.status,
-          body: "Ops! algo deu errado, tente novamente",
-        }
-      : connect;
+    return connect;
+  }
+
+  async function PatchAPI(url: string, data: unknown, auth: boolean) {
+    const connect = await api
+      .patch(url, data, config(auth))
+      .then(({ data }) => {
+        return {
+          status: 200,
+          body: data,
+        };
+      })
+      .catch((err) => {
+        const message = err.response?.data || "Erro desconhecido";
+        const status = err.response?.status || 500;
+        return { status, body: message };
+      });
+
+    return connect;
   }
 
   return (
@@ -149,7 +160,9 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
         PostAPI,
         GetAPI,
         PutAPI,
+        PatchAPI,
         DeleteAPI,
+        setToken,
       }}
     >
       {children}

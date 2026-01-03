@@ -1,31 +1,256 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  /* Changing the default fontFamily to Poppins */
-  --font-sans: "Poppins", sans-serif;
-
-  /* --color-primary: #ed6842; */
-
-  /* --animate-accordion-up: accordion-up 0.2s ease-out;
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-
-  @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height);
-    }
-    to {
-      height: 0;
-    }
+@layer components {
+  .react-datepicker {
+    @apply !border-n-3 !font-inter dark:bg-n-7 dark:!border-n-5 overflow-hidden !rounded-lg shadow-[0_0_1rem_0.25rem_rgba(0,0,0,0.04),0_2rem_2rem_-1rem_rgba(0,0,0,0.1)];
+  }
+  .react-datepicker .react-datepicker__header {
+    @apply border-none bg-transparent;
+  }
+  .react-datepicker .react-datepicker__current-month {
+    @apply base2 text-n-4/75 font-semibold;
+  }
+  .react-datepicker .react-datepicker__navigation {
+    @apply top-1.5;
+  }
+  .react-datepicker .react-datepicker__navigation-icon::before {
+    @apply dark:border-n-4 transition-colors;
+  }
+  .react-datepicker
+    .react-datepicker__navigation:hover
+    .react-datepicker__navigation-icon::before {
+    @apply dark:border-n-3;
+  }
+  .react-datepicker .react-datepicker__triangle {
+    @apply hidden;
+  }
+  .react-datepicker .react-datepicker__day-name {
+    @apply caption2 text-n-5 pt-2 font-semibold;
+  }
+  .react-datepicker .react-datepicker__day {
+    @apply caption1 dark:text-n-1 dark:hover:text-n-7 rounded py-[0.22rem] transition-colors;
+  }
+  .react-datepicker .react-datepicker__day.past {
+    @apply text-n-4/50 pointer-events-none;
+  }
+  .react-datepicker .react-datepicker__day--today {
+    @apply bg-n-3 text-n-1;
+  }
+  .react-datepicker .react-datepicker__day--today.past {
+    @apply text-n-7 pointer-events-auto;
+  }
+  .react-datepicker .react-datepicker__day--selected {
+    @apply bg-primary-1 !text-n-1;
+  }
+  .react-datepicker .react-datepicker__day--keyboard-selected {
+    @apply bg-transparent;
+  }
+  .react-datepicker .react-datepicker__day--outside-month {
+    @apply invisible opacity-0;
+  }
+  .react-datepicker .react-datepicker__time-container,
+  .react-datepicker
+    .react-datepicker__time-container
+    .react-datepicker__time
+    .react-datepicker__time-box {
+    @apply dark:bg-n-7 dark:border-n-5 w-[15rem] !rounded-lg text-left;
+  }
+  .react-datepicker .react-datepicker__time-container .react-datepicker__time {
+    @apply bg-transparent;
+  }
+  .react-datepicker .react-datepicker__header--time {
+    @apply hidden;
+  }
+  .react-datepicker .react-datepicker__time-list-item {
+    @apply transition-colors;
+  }
+  .react-datepicker
+    .react-datepicker__time-container
+    .react-datepicker__time
+    .react-datepicker__time-box
+    ul.react-datepicker__time-list
+    li.react-datepicker__time-list-item {
+    @apply dark:text-n-4 dark:hover:text-n-7 pl-5 leading-normal;
+  }
+  .react-datepicker
+    .react-datepicker__time-container
+    .react-datepicker__time
+    .react-datepicker__time-box
+    ul.react-datepicker__time-list
+    li.react-datepicker__time-list-item--selected {
+    @apply bg-primary-1 text-n-1 dark:text-n-1;
   }
 
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(--radix-accordion-content-height);
-    }
-  } */
+  .multiselect .multiselect__control {
+    @apply border-n-3 base1 hover:border-n-4/50 dark:border-n-5 min-h-[3.25rem] cursor-pointer rounded-xl border-2 p-0 shadow-none transition-colors outline-none dark:bg-transparent;
+  }
+  .multiselect .multiselect__control.multiselect__control--menu-is-open {
+    @apply border-primary-1;
+  }
+  .multiselect .multiselect__value-container {
+    @apply py-0 pr-0 pl-13;
+  }
+  .multiselect-access .multiselect__value-container {
+    @apply pr-32;
+  }
+  .multiselect .multiselect__input {
+    @apply dark:!text-n-1;
+  }
+  .multiselect .multiselect__input:focus {
+    @apply md:base1;
+  }
+  .multiselect .multiselect__placeholder {
+    @apply text-n-4/50;
+  }
+  .multiselect .multiselect__value-container--has-value {
+    @apply pl-0;
+  }
+  .multiselect .multiselect__multi-value {
+    @apply bg-n-3/50 fill-n-4/50 hover:!bg-primary-1 hover:text-n-1 hover:fill-n-1 dark:bg-n-6 m-1 rounded-lg p-2 transition-colors;
+  }
+  .multiselect .multiselect__multi-value__label {
+    @apply p-0 text-inherit transition-none;
+  }
+  .multiselect .multiselect__multi-value__remove {
+    @apply p-0 hover:scale-110 hover:!bg-transparent;
+  }
+  .multiselect .multiselect__indicators {
+    @apply hidden;
+  }
+  .multiselect .multiselect__menu {
+    @apply dark:bg-n-7 z-10 mt-2 rounded-xl p-2 shadow-[inset_0_0_0_0.0625rem_#E8ECEF,0_0_1rem_0.25rem_rgba(0,0,0,0.04),0_2rem_2rem_-1rem_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0_0_0.0625rem_#343839,0_0_1rem_0.25rem_rgba(0,0,0,0.04),0_2rem_2rem_-1rem_rgba(0,0,0,0.1)];
+  }
+  .multiselect .multiselect__menu-list {
+    @apply max-h-[12rem] overflow-auto scroll-smooth p-0;
+  }
+  .multiselect .multiselect__option {
+    @apply flex cursor-pointer items-center rounded-xl px-2 py-2.5 transition-colors;
+  }
+  .multiselect .multiselect__option--is-focused {
+    @apply bg-n-3/50 dark:bg-n-6;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .input-field {
+    @apply w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-sm transition-all outline-none dark:border-neutral-700 dark:bg-black;
+  }
+  .input-field:focus {
+    @apply border-[#AB8E63] ring-1 ring-[#AB8E63]/20;
+  }
+  .input-field:disabled {
+    @apply cursor-not-allowed bg-neutral-100 dark:bg-neutral-800;
+  }
+  .input-field-card {
+    @apply w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 pl-10 text-sm transition-all outline-none dark:border-neutral-700 dark:bg-black;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-out-to-left {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in-from-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  .fade-in {
+    animation: fade-in 300ms ease-out both;
+  }
+  .fade-out {
+    animation: fade-out 300ms ease-in both;
+  }
+  .accordion-down {
+    animation: accordion-down 100ms ease-out;
+  }
+  .accordion-up {
+    animation: accordion-up 100ms ease-in;
+  }
+  .slide-in {
+    animation: slide-in 300ms ease-out both;
+  }
+  .slide-out {
+    animation: slide-out 300ms ease-in both;
+  }
+  .slide-out-to-left {
+    animation: slide-out-to-left 300ms ease-in both;
+  }
+  .slide-in-from-left {
+    animation: slide-in-from-left 300ms ease-out both;
+  }
 }
 
 .swiper-slide {
