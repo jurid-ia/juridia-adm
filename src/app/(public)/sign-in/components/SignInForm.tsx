@@ -14,8 +14,8 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 
 import {
-    SigninValidationData,
-    SigninValidationSchema,
+  SigninValidationData,
+  SigninValidationSchema,
 } from "@/@schemas/signin";
 
 // ... imports
@@ -35,8 +35,8 @@ const SignInForm = ({}: SignInFormProps) => {
     resolver: zodResolver(SigninValidationSchema),
     mode: "onChange",
     defaultValues: {
-      email: "admin@juridia.com",
-      password: "admin",
+      email: "",
+      password: "",
     },
   });
 

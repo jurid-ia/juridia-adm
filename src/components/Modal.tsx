@@ -43,14 +43,14 @@ const Modal = ({
     >
       <div
         className={twMerge(
-          `fixed inset-0 bg-n-7/90 dark:bg-n-8/90 opacity-100 transition-opacity ${classOverlay}`
+          `fixed inset-0 bg-n-7/40 dark:bg-n-8/90 opacity-100 transition-opacity ${classOverlay}`
         )}
         onClick={onClose}
         aria-hidden="true"
       />
       <div
         className={twMerge(
-          `relative z-10 w-full max-w-sm bg-n-1 dark:bg-n-7 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${classWrap}`
+          `relative z-10 w-full max-w-sm bg-n-1 dark:bg-n-6 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${classWrap}`
         )}
       >
         <div className="flex justify-between items-center p-4 border-b border-n-3 dark:border-n-6">

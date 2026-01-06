@@ -12,14 +12,14 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div
-      className={`bg-secondary-1 dark:bg-n-6 min-h-screen transition-all duration-300 ${
+      className={`bg-n-2 dark:bg-n-6 min-h-screen transition-all duration-300 ${
         visibleSidebar ? "pl-24" : "pl-80"
       }`}
     >
       <LeftSidebar value={visibleSidebar} setValue={setVisibleSidebar} />
 
       <div
-        className={`bg-secondary-1 dark:bg-n-6 flex min-h-screen px-4 py-6 transition-all duration-300`}
+        className={`bg-n-2 dark:bg-n-6 flex min-h-screen px-4 py-6 transition-all duration-300`}
       >
         <div
           className={`bg-n-1 dark:bg-n-8 relative flex max-w-full grow rounded-[1.25rem] p-6 md:rounded-lg`}

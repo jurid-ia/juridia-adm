@@ -9,6 +9,22 @@ type ApiContextType = {
   PatchAPI: (url: string, data: any, auth: boolean) => Promise<ApiResponse>;
 };
 
+export type PaginatedResponse<T> = {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
 const handleResponse = (response: ApiResponse) => {
     if (response.status >= 200 && response.status < 300) {
         return response.body;
@@ -18,8 +34,9 @@ const handleResponse = (response: ApiResponse) => {
 
 export const adminService = {
   // Offices
-  listOffices: async (api: ApiContextType): Promise<Office[]> => {
-    const res = await api.GetAPI("/admin/offices", true);
+  listOffices: async (api: ApiContextType, params: PaginationParams = {}): Promise<PaginatedResponse<Office>> => {
+    const query = new URLSearchParams(params as any).toString();
+    const res = await api.GetAPI(`/admin/offices?${query}`, true);
     return handleResponse(res);
   },
 
@@ -34,9 +51,9 @@ export const adminService = {
   },
 
   // Lawyers
-  listLawyers: async (api: ApiContextType): Promise<Lawyer[]> => {
-    const res = await api.GetAPI("/admin/lawyers", true);
-    // Backend returns list, ensure mapping if needed. Returning directly.
+  listLawyers: async (api: ApiContextType, params: PaginationParams = {}): Promise<PaginatedResponse<Lawyer>> => {
+    const query = new URLSearchParams(params as any).toString();
+    const res = await api.GetAPI(`/admin/lawyers?${query}`, true);
     return handleResponse(res);
   },
 
@@ -46,9 +63,7 @@ export const adminService = {
   },
 
   updateLawyer: async (api: ApiContextType, id: string, data: Partial<CreateLawyerDTO>): Promise<Lawyer> => {
-    console.log("updateLawyer data: ", data)
     const res = await api.PutAPI(`/admin/lawyers/${id}`, data, true);
-    console.log("updateLawyer res: ", res)
     return handleResponse(res);
   },
 

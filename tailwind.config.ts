@@ -105,7 +105,7 @@ const config: Config = {
           "@apply text-[1rem]": {},
         },
         body: {
-          "@apply bg-n-7 text-[1rem] leading-6 -tracking-[.01em] text-n-7 antialiased md:bg-n-1 dark:text-n-1 dark:md:bg-n-6":
+          "@apply bg-n-2 text-[1rem] leading-6 -tracking-[.01em] text-n-7 antialiased md:bg-n-2 dark:text-n-1 dark:md:bg-n-6":
             {},
         },
       });

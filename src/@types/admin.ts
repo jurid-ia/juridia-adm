@@ -43,3 +43,23 @@ export type CreateLawyerDTO = {
   lawFirmId: string;
   role: "ADMIN" | "USER";
 };
+
+export type Partner = {
+  id: string;
+  name: string;
+  email: string;
+  code: string;
+  walletId: string;
+  discount: number;
+  commission: number;
+  isActive?: boolean;
+};
+
+export type CreatePartnerDTO = {
+  name: string;
+  email: string;
+  code: string;
+  walletId: string;
+  discount: number;
+  commission: number;
+};

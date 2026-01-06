@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 import { useCookies } from "next-client-cookies";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -33,6 +33,8 @@ interface ApiContextProps {
   setToken: (token: string) => void;
 }
 
+export type ApiContextType = ApiContextProps;
+
 const ApiContext = createContext<ApiContextProps | undefined>(undefined);
 
 interface ProviderProps {
@@ -43,19 +45,40 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
   const cookies = useCookies();
   const [token, setTokenState] = useState<string | undefined>(cookies.get("token"));
 
-  const api = axios.create({
-    baseURL,
-  });
+  // Criar axios instance uma única vez com useMemo
+  const api: AxiosInstance = useMemo(() => {
+    const instance = axios.create({ baseURL });
+    
+    // Interceptor para lidar com token expirado (401)
+    instance.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response?.status === 401) {
+          cookies.remove("token");
+          if (typeof window !== 'undefined') {
+            window.location.href = '/auth/signin';
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+    
+    return instance;
+  }, []);
 
   const setToken = (newToken: string) => {
-      setTokenState(newToken);
-      // Ensure cookie is also synced if not already
-      cookies.set("token", newToken); 
+    setTokenState(newToken);
+    // Cookie com configurações de segurança
+    cookies.set("token", newToken, {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/'
+    });
   };
 
   function config(auth: boolean) {
-    // Attempt to get from state, fallback to cookie (for initial load consistency)
-    const currentToken = token || cookies.get("token");
+    // Sempre ler do cookie (source of truth única)
+    const currentToken = cookies.get("token");
     return {
       headers: {
         Authorization: auth ? `Bearer ${currentToken}` : "",

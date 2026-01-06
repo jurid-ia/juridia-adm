@@ -4,6 +4,7 @@ import { CreateOfficeDTO, Office } from "@/@types/admin";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import Field from "@/components/ui/field";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApiContext } from "@/context/ApiContext";
 import { adminService } from "@/services/admin/adminService";
 import { masks } from "@/utils/masks";
@@ -85,7 +86,7 @@ export default function OfficeModal({
     >
       <div className="flex flex-col gap-4">
         <Field
-          label="Nome do Escritório"
+          label="Nome do Escritório*"
           value={formData.name}
           onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
           placeholder="Ex: Silva & Associados"
@@ -94,37 +95,52 @@ export default function OfficeModal({
         <div className="flex gap-4">
              <div className="w-1/2">
                 <Field
-                    label="CNPJ"
+                    label={formData.paymentType === "CPF" ? "CPF*" : "CNPJ*"}
                     value={formData.cnpj || ""}
-                    onChange={(e: any) => setFormData({ ...formData, cnpj: masks.cnpj(e.target.value) })}
-                    placeholder="00.000.000/0000-00"
-                    maxLength={18}
+                    onChange={(e: any) => {
+                      const maskedValue = formData.paymentType === "CPF" 
+                        ? masks.cpf(e.target.value)
+                        : masks.cnpj(e.target.value);
+                      setFormData({ ...formData, cnpj: maskedValue });
+                    }}
+                    placeholder={formData.paymentType === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"}
+                    maxLength={formData.paymentType === "CPF" ? 14 : 18}
                 />
              </div>
              <div className="w-1/2">
-                <label className="mb-2 base2 font-semibold flex">Tipo Pagamento</label>
-                 <select
-                    className="w-full h-13 px-3.5 bg-n-2 border-2 border-n-2 rounded-xl base2 text-n-7 outline-none dark:bg-n-8 dark:border-n-6 dark:text-n-3"
-                    value={formData.paymentType}
-                    onChange={(e) => setFormData({ ...formData, paymentType: e.target.value as "CNPJ" | "CPF" })}
+                <label className="mb-2 base2 font-semibold flex">Tipo Pagamento*</label>
+                <Select 
+                  value={formData.paymentType} 
+                  onValueChange={(value) => {
+                    setFormData({ 
+                      ...formData, 
+                      paymentType: value as "CNPJ" | "CPF",
+                      cnpj: "" // Limpa o campo ao trocar o tipo
+                    });
+                  }}
                 >
-                    <option value="CNPJ">CNPJ</option>
-                    <option value="CPF">CPF</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CNPJ">CNPJ</SelectItem>
+                    <SelectItem value="CPF">CPF</SelectItem>
+                  </SelectContent>
+                </Select>
              </div>
         </div>
 
         <div className="flex gap-4">
             <div className="w-2/3">
                 <Field
-                    label="Endereço"
+                    label="Endereço*"
                     value={formData.address}
                     onChange={(e: any) => setFormData({ ...formData, address: e.target.value })}
                 />
             </div>
             <div className="w-1/3">
                  <Field
-                    label="Número"
+                    label="Número*"
                     value={formData.number}
                     onChange={(e: any) => setFormData({ ...formData, number: e.target.value })}
                 />
@@ -132,7 +148,7 @@ export default function OfficeModal({
         </div>
 
         <Field
-            label="CEP"
+            label="CEP*"
             value={formData.postalCode}
             onChange={(e: any) => setFormData({ ...formData, postalCode: masks.cep(e.target.value) })} // Applied CEP mask
             maxLength={9} // Added maxLength for CEP

@@ -3,7 +3,9 @@
 import { CreateLawyerDTO, Lawyer, Office } from "@/@types/admin";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import Field from "@/components/ui/field";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApiContext } from "@/context/ApiContext";
 import { adminService } from "@/services/admin/adminService";
 import { masks } from "@/utils/masks";
@@ -66,8 +68,9 @@ export default function ClientModal({
 
   const loadOffices = async () => {
       try {
-          const data = await adminService.listOffices(api);
-          setOffices(data);
+          // Fetch a large number of offices for the dropdown
+          const response = await adminService.listOffices(api, { limit: 1000, page: 1 });
+          setOffices(response.data);
       } catch (error) {
           console.error("Failed to load offices", error);
       }
@@ -106,7 +109,7 @@ export default function ClientModal({
     >
       <div className="flex flex-col gap-4">
         <Field
-          label="Nome Completo"
+          label="Nome Completo*"
           value={formData.name}
           onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
           placeholder="Ex: Ana Souza"
@@ -115,7 +118,7 @@ export default function ClientModal({
         <div className="flex gap-4">
              <div className="w-1/2">
                 <Field
-                    label="Email"
+                    label="Email*"
                     type="email"
                     value={formData.email}
                     onChange={(e: any) => setFormData({ ...formData, email: e.target.value })}
@@ -123,7 +126,7 @@ export default function ClientModal({
              </div>
              <div className="w-1/2">
                 <Field
-                    label="Telefone"
+                    label="Telefone*"
                     value={formData.phone}
                     onChange={(e: any) => setFormData({ ...formData, phone: masks.phone(e.target.value) })}
                     placeholder="(00) 00000-0000"
@@ -135,7 +138,7 @@ export default function ClientModal({
         <div className="flex gap-4">
             <div className="w-1/2">
                 <Field
-                    label="CPF"
+                    label="CPF*"
                     value={formData.cpf || ""}
                     onChange={(e: any) => setFormData({ ...formData, cpf: masks.cpf(e.target.value) })}
                     placeholder="000.000.000-00"
@@ -143,30 +146,34 @@ export default function ClientModal({
                 />
             </div>
              <div className="w-1/2">
-                <label className="mb-2 base2 font-semibold flex">Função (Role)</label>
-                 <select
-                    className="w-full h-13 px-3.5 bg-n-2 border-2 border-n-2 rounded-xl base2 text-n-7 outline-none dark:bg-n-8 dark:border-n-6 dark:text-n-3"
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as "ADMIN" | "USER" })}
+                <label className="mb-2 base2 font-semibold flex">Função (Role)*</label>
+                <Select 
+                  value={formData.role} 
+                  onValueChange={(value) => setFormData({ ...formData, role: value as "ADMIN" | "USER" })}
                 >
-                    <option value="USER">Usuário (Advogado)</option>
-                    <option value="ADMIN">Admin</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USER">Usuário (Advogado)</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
              </div>
         </div>
 
         <div>
-            <label className="mb-2 base2 font-semibold flex">Escritório *</label>
-            <select
-                className="w-full h-13 px-3.5 bg-n-2 border-2 border-n-2 rounded-xl base2 text-n-7 outline-none dark:bg-n-8 dark:border-n-6 dark:text-n-3"
+            <label className="mb-2 base2 font-semibold flex">Escritório*</label>
+            <Combobox
+                options={offices.map(office => ({ 
+                  value: office.id, 
+                  label: `${office.name} ${office.cnpj ? `(${office.cnpj})` : '(CPF)'}` 
+                }))}
                 value={formData.lawFirmId}
-                onChange={(e) => setFormData({ ...formData, lawFirmId: e.target.value })}
-            >
-                <option value="">Selecione um escritório...</option>
-                {offices.map(office => (
-                    <option key={office.id} value={office.id}>{office.name} ({office.cnpj || "CPF"})</option>
-                ))}
-            </select>
+                onChange={(value) => setFormData({ ...formData, lawFirmId: value })}
+                placeholder="Selecione um escritório..."
+                searchPlaceholder="Buscar escritório..."
+            />
         </div>
 
         <Field

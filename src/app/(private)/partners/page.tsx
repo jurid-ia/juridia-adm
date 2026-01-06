@@ -1,33 +1,32 @@
+
 "use client";
 
-import { Lawyer, Office } from "@/@types/admin";
+import { Partner } from "@/@types/admin";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SortableHeader } from "@/components/ui/SortableHeader";
 import { useApiContext } from "@/context/ApiContext";
-import { adminService } from "@/services/admin/adminService";
+import { partnerService } from "@/services/partner/partnerService";
 import { Filter, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import ClientModal from "./_components/ClientModal";
+import PartnerModal from "./_components/PartnerModal";
 
-export default function ClientsPage() {
+export default function PartnersPage() {
   const api = useApiContext();
-  const [lawyers, setLawyers] = useState<Lawyer[]>([]);
-  const [offices, setOffices] = useState<Office[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingLawyer, setEditingLawyer] = useState<Lawyer | undefined>(undefined);
+  const [editingPartner, setEditingPartner] = useState<Partner | undefined>(undefined);
 
   // Pagination & Search State
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
-  // Filter States
-  const [roleFilter, setRoleFilter] = useState("ALL");
-  const [officeFilter, setOfficeFilter] = useState("ALL");
+  // Filter State
+  const [statusFilter, setStatusFilter] = useState("ALL");
   
   // Sort State
   const [sort, setSort] = useState({ by: "name", order: "asc" as 'asc' | 'desc' });
@@ -39,19 +38,6 @@ export default function ClientsPage() {
     limit: 20,
   });
 
-  // Load offices list
-  useEffect(() => {
-    const loadOffices = async () => {
-      try {
-        const response = await adminService.listOffices(api, { limit: 1000 });
-        setOffices(response.data);
-      } catch (error) {
-        console.error("Erro ao carregar escritórios:", error);
-      }
-    };
-    loadOffices();
-  }, []);
-
   // Debounce search
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -61,10 +47,10 @@ export default function ClientsPage() {
     return () => clearTimeout(handler);
   }, [search]);
 
-  // Load data when page, debouncedSearch, filters or sort changes
+  // Load data when page, debouncedSearch, filter or sort changes
   useEffect(() => {
     loadData();
-  }, [page, debouncedSearch, roleFilter, officeFilter, sort]);
+  }, [page, debouncedSearch, statusFilter, sort]);
 
   const loadData = async () => {
     setLoading(true);
@@ -77,28 +63,37 @@ export default function ClientsPage() {
         sortOrder: sort.order,
       };
       
-      // Add filters if selected (skip "ALL")
-      if (roleFilter && roleFilter !== "ALL") params.role = roleFilter;
-      if (officeFilter && officeFilter !== "ALL") params.lawFirmId = officeFilter;
+      if (statusFilter && statusFilter !== "ALL") params.isActive = statusFilter;
       
-      const response = await adminService.listLawyers(api, params);
-      setLawyers(response.data);
+      const response = await partnerService.getPartners(api, params);
+      setPartners(response.data);
       setMeta(response.meta);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao carregar advogados");
+      toast.error("Erro ao carregar parceiros");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (lawyer: Lawyer) => {
-    setEditingLawyer(lawyer);
+  const handleEdit = (partner: Partner) => {
+    setEditingPartner(partner);
     setIsModalOpen(true);
   };
 
+  const handleDelete = async (id: string) => {
+      if(!confirm("Tem certeza que deseja remover este parceiro?")) return;
+      try {
+          await partnerService.deletePartner(api, id);
+          toast.success("Parceiro removido!");
+          loadData();
+      } catch (error) {
+          toast.error("Erro ao remover parceiro");
+      }
+  }
+
   const handleCreate = () => {
-    setEditingLawyer(undefined);
+    setEditingPartner(undefined);
     setIsModalOpen(true);
   };
 
@@ -111,21 +106,18 @@ export default function ClientsPage() {
   };
 
   const clearFilters = () => {
-    setRoleFilter("ALL");
-    setOfficeFilter("ALL");
+    setStatusFilter("ALL");
     setPage(1);
   };
 
-  const hasActiveFilters = 
-    (roleFilter && roleFilter !== "ALL") || 
-    (officeFilter && officeFilter !== "ALL");
+  const hasActiveFilters = statusFilter && statusFilter !== "ALL";
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-n-7 dark:text-n-1">Advogados</h1>
+        <h1 className="text-2xl font-bold text-n-7 dark:text-n-1">Parceiros</h1>
         <Button onClick={handleCreate}>
-          <span className="mr-2">+</span> Novo Advogado
+          <span className="mr-2">+</span> Novo Parceiro
         </Button>
       </div>
 
@@ -134,7 +126,7 @@ export default function ClientsPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-n-4" />
         <input
           type="text"
-          placeholder="Buscar advogado por nome ou email..."
+          placeholder="Buscar parceiro por nome, email ou código..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 rounded-lg border border-n-3 dark:border-n-6 bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -161,32 +153,15 @@ export default function ClientsPage() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-n-7 dark:text-n-3">Tipo de Usuário</label>
-            <Select value={roleFilter} onValueChange={(value) => { setRoleFilter(value); setPage(1); }}>
+            <label className="text-xs font-medium text-n-7 dark:text-n-3">Status</label>
+            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Todos</SelectItem>
-                <SelectItem value="ADMIN">Administrador</SelectItem>
-                <SelectItem value="USER">Usuário</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-n-7 dark:text-n-3">Escritório</label>
-            <Select value={officeFilter} onValueChange={(value) => { setOfficeFilter(value); setPage(1); }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os escritórios" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Todos</SelectItem>
-                {offices.map((office) => (
-                  <SelectItem key={office.id} value={office.id}>
-                    {office.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="true">Ativo</SelectItem>
+                <SelectItem value="false">Inativo</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -203,41 +178,49 @@ export default function ClientsPage() {
                 <tr className="border-b border-n-3 text-n-4 dark:border-n-6">
                   <SortableHeader label="Nome" sortKey="name" currentSort={sort} onSort={handleSort} />
                   <SortableHeader label="Email" sortKey="email" currentSort={sort} onSort={handleSort} />
-                  <th className="pb-4 font-semibold">Escritório</th>
-                  <SortableHeader label="Role" sortKey="role" currentSort={sort} onSort={handleSort} />
+                  <SortableHeader label="Código" sortKey="code" currentSort={sort} onSort={handleSort} />
+                  <th className="pb-4 font-semibold">Comissão</th>
+                  <th className="pb-4 font-semibold">Desconto</th>
+                  <th className="pb-4 font-semibold">Wallet ID</th>
+                  <th className="pb-4 font-semibold">Status</th>
                   <th className="pb-4 font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {lawyers.map((lawyer) => (
+                {partners.map((partner) => (
                   <tr
-                    key={lawyer.id}
-                    onClick={() => handleEdit(lawyer)}
+                    key={partner.id}
                     className="cursor-pointer border-b border-n-3/50 transition-colors hover:bg-n-2/50 dark:border-n-6/50 dark:hover:bg-n-6/50"
+                    onClick={() => handleEdit(partner)}
                   >
                     <td className="py-4 font-semibold text-n-7 dark:text-n-1">
-                      {lawyer.name}
+                      {partner.name}
                     </td>
-                    <td className="py-4 text-n-4">{lawyer.email}</td>
-                    <td className="py-4 font-medium">
-                      {lawyer.lawFirm?.name || "Sem escritório"}
+                    <td className="py-4 text-xs text-n-4">{partner.email}</td>
+                    <td className="py-4 font-mono text-xs font-medium">
+                      {partner.code}
+                    </td>
+                    <td className="py-4 text-sm">{partner.commission}%</td>
+                    <td className="py-4 text-sm">{partner.discount}%</td>
+                    <td className="py-4 text-xs text-n-4 font-mono">
+                      {partner.walletId?.substring(0, 8) || '****'}****
                     </td>
                     <td className="py-4">
                       <span
                         className={`rounded px-2 py-1 text-xs font-medium ${
-                          lawyer.role === "ADMIN"
-                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                          partner.isActive
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         }`}
                       >
-                        {lawyer.role}
+                        {partner.isActive ? "Ativo" : "Inativo"}
                       </span>
                     </td>
                     <td className="flex gap-2 py-4">
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEdit(lawyer);
+                          handleEdit(partner);
                         }}
                         variant="secondary"
                         className="h-8 px-3 text-xs"
@@ -250,9 +233,9 @@ export default function ClientsPage() {
               </tbody>
             </table>
 
-            {!loading && lawyers.length === 0 && (
+            {!loading && partners.length === 0 && (
               <div className="py-8 text-center text-n-4">
-                Nenhum advogado encontrado.
+                Nenhum parceiro encontrado.
               </div>
             )}
 
@@ -267,11 +250,11 @@ export default function ClientsPage() {
         )}
       </div>
 
-      <ClientModal
+      <PartnerModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={loadData}
-        lawyer={editingLawyer}
+        partner={editingPartner}
       />
     </div>
   );

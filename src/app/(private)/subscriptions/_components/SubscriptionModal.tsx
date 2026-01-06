@@ -1,9 +1,11 @@
-"use client";
-
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Combobox } from "@/components/ui/combobox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useApiContext } from "@/context/ApiContext";
 import { adminService } from "@/services/admin/adminService";
+import { partnerService } from "@/services/partner/partnerService"; // Import partnerService
 import { SignaturePlan, Subscription, subscriptionService } from "@/services/subscription/subscriptionService";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -27,12 +29,14 @@ export default function SubscriptionModal({
   // Data lists
   const [offices, setOffices] = useState<any[]>([]);
   const [plans, setPlans] = useState<SignaturePlan[]>([]);
+  const [partners, setPartners] = useState<any[]>([]); // Partners List
   
   // Filters
   const [selectedOfficeId, setSelectedOfficeId] = useState(subscription?.lawFirmId || "");
   const [selectedPlanId, setSelectedPlanId] = useState(subscription?.signaturePlanId || "");
+  const [selectedPartnerId, setSelectedPartnerId] = useState(""); // Partner Selection
   const [yearly, setYearly] = useState(subscription?.yearly || false);
-  const [isTrial, setIsTrial] = useState(false); // Only for creation
+  const [isTrial, setIsTrial] = useState(false);
 
   useEffect(() => {
      if (isOpen) {
@@ -41,9 +45,11 @@ export default function SubscriptionModal({
              setSelectedOfficeId(subscription.lawFirmId);
              setSelectedPlanId(subscription.signaturePlanId);
              setYearly(subscription.yearly);
+             // Note: We don't have partnerId in subscription object yet to pre-fill, assuming new logic mainly
          } else {
              setSelectedOfficeId("");
              setSelectedPlanId("");
+             setSelectedPartnerId("");
              setYearly(false);
              setIsTrial(false);
          }
@@ -52,16 +58,22 @@ export default function SubscriptionModal({
 
   const fetchOptions = async () => {
       try {
-          const [officesData, plansData] = await Promise.all([
-              adminService.listOffices(api),
-              subscriptionService.getPlans(api)
+          const [officesData, plansData, partnersData] = await Promise.all([
+              adminService.listOffices(api, { limit: 1000, page: 1 }),
+              subscriptionService.getPlans(api),
+              partnerService.getPartners(api)
           ]);
-          setOffices(officesData);
+
+          console.log("offices: ",  officesData)
+          console.log("plans: ",  plansData)
+          console.log("partners: ",  partnersData)
+          setOffices(officesData.data);
           setPlans(plansData);
+          setPartners(partnersData.data);
       } catch (error) {
           console.error(error);
           toast.error("Erro ao carregar opções");
-      }
+      } 
   };
 
   const handleSubmit = async () => {
@@ -76,8 +88,15 @@ export default function SubscriptionModal({
           await subscriptionService.changePlan(api, subscription.id, selectedPlanId, yearly);
           toast.success("Plano atualizado!");
       } else {
-          // If editing a non-active subscription or creating new, we treat as NEW creation
-          await subscriptionService.createSubscription(api, selectedOfficeId, selectedPlanId, yearly, isTrial);
+          // Pass partnerId
+          await subscriptionService.createSubscription(
+              api, 
+              selectedOfficeId, 
+              selectedPlanId, 
+              yearly, 
+              isTrial,
+              selectedPartnerId || undefined // Pass undefined if empty string
+          );
           toast.success("Nova assinatura criada!");
       }
       onSuccess();
@@ -98,76 +117,78 @@ export default function SubscriptionModal({
     >
       <div className="flex flex-col gap-4">
         
-        <div>
-            <label className="mb-2 base2 font-semibold flex">Escritório (Cliente)</label>
-            <select
-                className="w-full h-13 px-3.5 bg-n-2 border-2 border-n-2 rounded-xl base2 text-n-7 outline-none dark:bg-n-8 dark:border-n-6 dark:text-n-3"
+        <div className="flex flex-col gap-2">
+            <label className="base2 font-semibold flex">Escritório (Cliente)</label>
+            <Combobox
+                options={offices.map(o => ({ value: o.id, label: `${o.name}` }))}
                 value={selectedOfficeId}
-                onChange={(e) => setSelectedOfficeId(e.target.value)}
-                disabled={!!subscription} // Cannot change client on edit
-            >
-                <option value="">Selecione um escritório</option>
-                {offices.map(o => (
-                    <option key={o.id} value={o.id}>{o.name} - {o.cnpj || "Sem CNPJ"}</option>
-                ))}
-            </select>
-        </div>
-
-        <div>
-            <label className="mb-2 base2 font-semibold flex">Plano</label>
-            <select
-                className="w-full h-13 px-3.5 bg-n-2 border-2 border-n-2 rounded-xl base2 text-n-7 outline-none dark:bg-n-8 dark:border-n-6 dark:text-n-3"
-                value={selectedPlanId}
-                onChange={(e) => setSelectedPlanId(e.target.value)}
-                // disabled={!!subscription} // Now allowed
-            >
-                <option value="">Selecione um plano</option>
-                {plans.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} - R$ {p.pixPrice}</option>
-                ))}
-            </select>
+                onChange={setSelectedOfficeId}
+                placeholder="Selecione um escritório"
+                searchPlaceholder="Buscar escritório..."
+                disabled={!!subscription}
+            />
         </div>
 
         <div className="flex flex-col gap-2">
-            <label className="base2 font-semibold">Ciclo de Pagamento</label>
-            <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                        type="radio" 
-                        name="cycle" 
-                        checked={!yearly} 
-                        onChange={() => setYearly(false)}
-                        // disabled={!!subscription} // Now allowed
-                        className="accent-primary-1"
-                    />
-                    <span>Mensal</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                        type="radio" 
-                        name="cycle" 
-                        checked={yearly} 
-                        onChange={() => setYearly(true)}
-                        // disabled={!!subscription} // Now allowed
-                        className="accent-primary-1"
-                    />
-                    <span>Anual (com desconto)</span>
-                </label>
-            </div>
+            <label className="base2 font-semibold flex">Plano</label>
+            <Combobox
+                options={plans.map(p => ({ value: p.id, label: `${p.name} - R$ ${p.pixPrice}` }))}
+                value={selectedPlanId}
+                onChange={setSelectedPlanId}
+                placeholder="Selecione um plano"
+                searchPlaceholder="Buscar plano..."
+            />
         </div>
+
+        {!subscription && (
+             <div className="flex flex-col gap-2">
+                <label className="base2 font-semibold flex">Parceiro/Vendedor (Opcional)</label>
+                <Combobox
+                    options={partners.map(p => ({ value: p.id, label: `${p.name} (Desconto: ${p.discount}%)` }))}
+                    value={selectedPartnerId}
+                    onChange={setSelectedPartnerId}
+                    placeholder="Selecione um parceiro"
+                    searchPlaceholder="Buscar parceiro..."
+                />
+            </div>
+        )}
+
+        {!isTrial && (
+            <div className="flex flex-col gap-2">
+                <label className="base2 font-semibold">Ciclo de Pagamento</label>
+                <RadioGroup 
+                    value={yearly ? 'yearly' : 'monthly'} 
+                    onValueChange={(val: string) => setYearly(val === 'yearly')}
+                    className="flex gap-4"
+                >
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="monthly" id="cycle-monthly" />
+                        <label htmlFor="cycle-monthly" className="cursor-pointer">Mensal</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="yearly" id="cycle-yearly" />
+                        <label htmlFor="cycle-yearly" className="cursor-pointer">Anual (com desconto)</label>
+                    </div>
+                </RadioGroup>
+            </div>
+        )}
 
         {!subscription && (
             <div className="flex flex-col gap-2">
                 <label className="base2 font-semibold">Período de Teste</label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                        type="checkbox" 
-                        checked={isTrial} 
-                        onChange={(e) => setIsTrial(e.target.checked)}
-                        className="w-4 h-4 accent-primary-1"
+                <div className="flex items-center space-x-2">
+                    <Checkbox 
+                        id="is-trial" 
+                        checked={isTrial}
+                        onCheckedChange={(checked: boolean | 'indeterminate') => setIsTrial(checked === true)}
                     />
-                    <span>Ativar Trial (7 dias grátis)</span>
-                </label>
+                    <label
+                        htmlFor="is-trial"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                        Ativar Trial (7 dias grátis)
+                    </label>
+                </div>
             </div>
         )}
 

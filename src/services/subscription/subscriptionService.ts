@@ -1,4 +1,6 @@
 
+import { PaginatedResponse, PaginationParams } from "../admin/adminService";
+
 // Start strict service definition matching adminService pattern
 
 // We redefine types here or import if they exist. adminService defines them inline/in-file mostly.
@@ -30,7 +32,13 @@ export interface Subscription {
       name: string;
       pixPrice: number;
       creditCardPrice: number;
+      yearlyDiscount: number;
   };
+  partner?: {
+      name: string;
+      discount: number;
+  };
+  appliedPartnerDiscount?: number;
   status: string;
   expirationDate: string;
   paymentType: string;
@@ -45,12 +53,14 @@ export interface SignaturePlan {
     name: string;
     creditCardPrice: number;
     pixPrice: number;
+    yearlyDiscount: number;
 }
 
 export const subscriptionService = {
   // admin/signature endpoints
-  getSubscriptions: async (api: ApiContextType): Promise<Subscription[]> => {
-    const res = await api.GetAPI("/admin/signature", true);
+  getSubscriptions: async (api: ApiContextType, params: PaginationParams = {}): Promise<PaginatedResponse<Subscription>> => {
+    const query = new URLSearchParams(params as any).toString();
+    const res = await api.GetAPI(`/admin/signature?${query}`, true);
     return handleResponse(res);
   },
 
@@ -61,15 +71,20 @@ export const subscriptionService = {
       return handleResponse(res);
   },
 
-  createSubscription: async (api: ApiContextType, lawFirmId: string, planId: string, yearly: boolean, isTrial: boolean): Promise<any> => {
-    console.log("createSubscription data: ", { lawFirmId, planId, yearly, isTrial });
-    const res = await api.PostAPI(`/admin/signature/create/${lawFirmId}/${planId}`, { yearly, isTrial }, true);
+  createSubscription: async (api: ApiContextType, lawFirmId: string, planId: string, yearly: boolean, isTrial: boolean, partnerId?: string): Promise<any> => {
+    console.log("createSubscription data: ", { lawFirmId, planId, yearly, isTrial, partnerId });
+    const res = await api.PostAPI(`/admin/signature/create/${lawFirmId}/${planId}`, { yearly, isTrial, partnerId }, true);
     console.log("createSubscription response: ", res);
     return handleResponse(res);
   },
   
   renewSubscription: async (api: ApiContextType, id: string) => {
       const res = await api.PostAPI(`/admin/signature/renew/${id}`, {}, true);
+      return handleResponse(res);
+  },
+
+  renewYearly: async (api: ApiContextType, id: string) => {
+      const res = await api.PostAPI(`/admin/signature/renew-yearly/${id}`, {}, true);
       return handleResponse(res);
   },
 

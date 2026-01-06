@@ -1,3 +1,5 @@
+import { PaginatedResponse, PaginationParams } from "../admin/adminService";
+
 export interface FiscalNote {
   id: string;
   number: string;
@@ -28,25 +30,30 @@ const handleResponse = (response: ApiResponse) => {
 };
 
 export const fiscalService = {
-  getNotes: async (api: ApiContextType): Promise<FiscalNote[]> => {
-    console.log("getNotes");
-    const res = await api.GetAPI("/admin/signature/invoices", true);
-    console.log("getNotes response: ", res);
-    const data = handleResponse(res);
-    // Asaas returns { data: [...] } usually for lists
-    const list = data.data || []; 
+  getNotes: async (api: ApiContextType, params: PaginationParams = {}): Promise<PaginatedResponse<FiscalNote>> => {
+    const query = new URLSearchParams(params as any).toString();
+    const res = await api.GetAPI(`/admin/signature/invoices?${query}`, true);
+    const body = handleResponse(res);
     
-    return list.map((item: any) => ({
+    // Backend returns { data: [...], meta: {...} }
+    const list = body.data || [];
+    
+    const mappedData = list.map((item: any) => ({
         id: item.id,
-        number: item.simpleId || item.id.replace('inv_', ''), // Use simpleId from backend or clean locally
+        number: item.simpleId || item.id.replace('inv_', ''),
         clientId: item.customer,
-        clientName: item.clientName || item.customer, // Use enriched name
+        clientName: item.clientName || item.customer, 
         value: item.value,
         issueDate: item.effectiveDate || item.dateCreated,
         status: item.status,
         taxes: item.taxes ? (item.taxes.iss || 0) : 0,
         pdfUrl: item.pdfUrl || item.invoiceUrl || null,
     }));
+
+    return {
+        data: mappedData,
+        meta: body.meta
+    };
   },
 
   generateNote: async (api: ApiContextType, data: { customerId: string, value: number, paymentId?: string }): Promise<void> => {

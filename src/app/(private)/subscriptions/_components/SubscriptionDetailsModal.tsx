@@ -80,11 +80,43 @@ export default function SubscriptionDetailsModal({
     }
   };
 
+  const handleRenewYearly = async () => {
+    if (!subscription) return;
+    if (!confirm("Deseja gerar uma nova cobrança anual para renovar esta assinatura?")) return;
+    
+    setActionLoading(true);
+    try {
+      await subscriptionService.renewYearly(api, subscription.id);
+      toast.success("Nova cobrança gerada com sucesso!");
+      onRefresh();
+      onClose();
+    } catch (error) {
+      toast.error("Erro ao gerar renovação");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const translateStatus = (status: string) => {
+      const map: Record<string, string> = {
+          'ACTIVE': 'Ativa',
+          'INACTIVE': 'Inativa',
+          'EXPIRED': 'Expirada',
+          'CANCELED': 'Cancelada', 
+          'RECEIVED': 'Recebido',
+          'PENDING': 'Pendente',
+          'OVERDUE': 'Atrasado',
+          'CONFIRMED': 'Confirmado'
+      };
+      return map[status] || status;
+  };
+
   const statusColor = (status: string) => {
       switch (status) {
           case 'RECEIVED': return 'text-green-600 bg-green-100';
           case 'PENDING': return 'text-yellow-600 bg-yellow-100';
           case 'OVERDUE': return 'text-red-600 bg-red-100';
+          case 'CONFIRMED': return 'text-blue-600 bg-blue-100';
           default: return 'text-gray-600 bg-gray-100';
       }
   };
@@ -104,14 +136,14 @@ export default function SubscriptionDetailsModal({
                     <span className={`px-2 py-1 rounded text-xs font-bold ${
                         subscription.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
                     }`}>
-                        {subscription.status}
+                        {translateStatus(subscription.status)}
                     </span>
                 </div>
                 <div className="text-sm text-n-4">
                     <p>Plano: {subscription.signaturePlan?.name}</p>
                     <p>Ciclo: {subscription.yearly ? 'Anual' : 'Mensal'}</p>
                     <p>Expira em: {formatDate(subscription.expirationDate)}</p>
-                    {subscription.paymentId && <p className="text-xs mt-1">Ref Pagamento: {subscription.paymentId}</p>}
+                    {/* {subscription.paymentId && <p className="text-xs mt-1">Ref Pagamento: {subscription.paymentId}</p>} */}
                 </div>
                 
                 {subscription.status === 'ACTIVE' && (
@@ -127,16 +159,27 @@ export default function SubscriptionDetailsModal({
                     </div>
                 )}
 
-                {(subscription.status === 'CANCELED' || subscription.status === 'INACTIVE') && (
+                {(subscription.status === 'CANCELED' || subscription.status === 'INACTIVE' || subscription.status === 'OVERDUE') && (
                     <div className="flex gap-2 mt-2">
-                         <Button 
-                            variant="blue" 
-                            className="h-8 text-xs bg-primary-1 hover:bg-primary-1/90 text-white"
-                            onClick={handleReactivate}
-                            disabled={actionLoading}
-                         >
-                             {actionLoading ? "Reativando..." : "Reativar Assinatura"}
-                         </Button>
+                         {subscription.yearly ? (
+                            <Button 
+                                variant="blue" 
+                                className="h-8 text-xs bg-primary-1 hover:bg-primary-1/90 text-white"
+                                onClick={handleRenewYearly}
+                                disabled={actionLoading}
+                             >
+                                 {actionLoading ? "Gerando..." : "Gerar Nova Cobrança (Anual)"}
+                             </Button>
+                         ) : (
+                            <Button 
+                                variant="blue" 
+                                className="h-8 text-xs bg-primary-1 hover:bg-primary-1/90 text-white"
+                                onClick={handleReactivate}
+                                disabled={actionLoading}
+                             >
+                                 {actionLoading ? "Reativando..." : "Reativar Assinatura"}
+                             </Button>
+                         )}
                     </div>
                 )}
             </div>
@@ -167,7 +210,7 @@ export default function SubscriptionDetailsModal({
                                     <td className="p-2">R$ {charge.value.toFixed(2)}</td>
                                     <td className="p-2">
                                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${statusColor(charge.status)}`}>
-                                            {charge.status}
+                                            {translateStatus(charge.status)}
                                         </span>
                                     </td>
                                     <td className="p-2">
