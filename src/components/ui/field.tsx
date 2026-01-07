@@ -1,5 +1,6 @@
 import Icon from "@/components/ui/icon";
-import { ReactNode } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import { ReactNode, useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 type FieldProps = {
@@ -35,6 +36,8 @@ const Field = ({
   Svg,
   maxLength,
 }: FieldProps) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleKeyDown = (event: any) => {
     const remainingChars = 880 - value.length;
     if (remainingChars <= 0 && event.key !== "Backspace") {
@@ -43,6 +46,8 @@ const Field = ({
   };
 
   const remainingChars = 880 - value.length;
+
+  const inputType = type === "password" && showPassword ? "text" : type || "text";
 
   return (
     <div className={`${className}`}>
@@ -74,11 +79,11 @@ const Field = ({
               className={twMerge(
                 `bg-n-2 border-n-2 base2 text-n-7 placeholder:text-n-4/50 dark:bg-n-8 dark:border-n-6 dark:text-n-3 dark:focus:bg-n-8 h-13 w-full rounded-xl border-2 px-3.5 transition-colors outline-none focus:border-white/20 focus:bg-n-2 dark:focus:border-white/20 ${
                   (icon || Svg) && "pl-[3.125rem]"
-                } ${
+                } ${type === "password" && "pr-10"} ${
                   value !== "" && "dark:bg-n-8 border-white/20"
                 } ${classInput}`,
               )}
-              type={type || "text"}
+              type={inputType}
               value={value}
               onChange={onChange}
               disabled={disabled}
@@ -102,6 +107,16 @@ const Field = ({
               }`}
               name={icon}
             />
+          )}
+
+          {type === "password" && (
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute top-1/2 right-4 -translate-y-1/2 p-1 text-n-4/50 transition-colors hover:text-n-7 dark:hover:text-n-3"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           )}
         </div>
         {note && <div className="base2 text-n-4/50 mt-2">{note}</div>}
