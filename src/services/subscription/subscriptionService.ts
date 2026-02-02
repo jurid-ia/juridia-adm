@@ -46,6 +46,7 @@ export interface Subscription {
   isAutoRenewActivated: boolean;
   createdAt: string;
   paymentId: string;
+  treatAsPaid?: boolean;
 }
 
 export interface SignaturePlan {
@@ -111,6 +112,32 @@ export const subscriptionService = {
   changePlan: async (api: ApiContextType, id: string, planId: string, yearly: boolean) => {
       const res = await api.PostAPI(`/admin/signature/change-plan/${id}`, { planId, yearly }, true);
       return handleResponse(res);
+  },
+
+  updateExpiration: async (
+    api: ApiContextType,
+    id: string,
+    expirationDate: string,
+  ): Promise<Subscription> => {
+    const res = await api.PatchAPI(
+      `/admin/signature/${id}`,
+      { expirationDate },
+      true,
+    );
+    return handleResponse(res);
+  },
+
+  updateTreatAsPaid: async (
+    api: ApiContextType,
+    id: string,
+    treatAsPaid: boolean,
+  ): Promise<Subscription> => {
+    const res = await api.PatchAPI(
+      `/admin/signature/${id}`,
+      { treatAsPaid },
+      true,
+    );
+    return handleResponse(res);
   },
 
   generateReceipt: async (api: ApiContextType, subscriptionId: string): Promise<void> => {

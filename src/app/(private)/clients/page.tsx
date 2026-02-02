@@ -7,27 +7,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SortableHeader } from "@/components/ui/SortableHeader";
 import { useApiContext } from "@/context/ApiContext";
 import { adminService } from "@/services/admin/adminService";
-import { Filter, Search, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { DebouncedSearchInput } from "@/components/ui/DebouncedSearchInput";
+import { Filter, X } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import ClientModal from "./_components/ClientModal";
 
 export default function ClientsPage() {
   const api = useApiContext();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const lawFirmIdFromUrl = searchParams.get("lawFirmId");
+
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [offices, setOffices] = useState<Office[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLawyer, setEditingLawyer] = useState<Lawyer | undefined>(undefined);
 
-  // Pagination & Search State
+  // Pagination & Search State (search fica só no DebouncedSearchInput para evitar re-render da página a cada tecla)
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
-  // Filter States
+  // Filter States (officeFilter pode vir da URL ao navegar da tela de escritórios)
   const [roleFilter, setRoleFilter] = useState("ALL");
-  const [officeFilter, setOfficeFilter] = useState("ALL");
+  const [officeFilter, setOfficeFilter] = useState(lawFirmIdFromUrl ?? "ALL");
   
   // Sort State
   const [sort, setSort] = useState({ by: "name", order: "asc" as 'asc' | 'desc' });
@@ -38,6 +45,11 @@ export default function ClientsPage() {
     page: 1,
     limit: 20,
   });
+
+  // Sincronizar filtro por escritório quando a URL tiver lawFirmId (ex.: link "Ver advogados" na tela de escritórios)
+  useEffect(() => {
+    if (lawFirmIdFromUrl) setOfficeFilter(lawFirmIdFromUrl);
+  }, [lawFirmIdFromUrl]);
 
   // Load offices list
   useEffect(() => {
@@ -52,14 +64,10 @@ export default function ClientsPage() {
     loadOffices();
   }, []);
 
-  // Debounce search
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1); // Reset to page 1 on search
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [search]);
+  const handleDebouncedSearch = useCallback((value: string) => {
+    setDebouncedSearch(value);
+    setPage(1);
+  }, []);
 
   // Load data when page, debouncedSearch, filters or sort changes
   useEffect(() => {
@@ -114,6 +122,13 @@ export default function ClientsPage() {
     setRoleFilter("ALL");
     setOfficeFilter("ALL");
     setPage(1);
+    // Remove lawFirmId da URL ao limpar filtros
+    if (lawFirmIdFromUrl) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("lawFirmId");
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname);
+    }
   };
 
   const hasActiveFilters = 
@@ -129,17 +144,12 @@ export default function ClientsPage() {
         </Button>
       </div>
 
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-n-4" />
-        <input
-          type="text"
-          placeholder="Buscar advogado por nome ou email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 rounded-lg border border-n-3 dark:border-n-6 bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/50"
-        />
-      </div>
+      {/* Search Input: estado local no componente evita re-render da página a cada tecla */}
+      <DebouncedSearchInput
+        placeholder="Buscar advogado por nome ou email..."
+        onDebouncedChange={handleDebouncedSearch}
+        delay={500}
+      />
 
       {/* Filters */}
       <div className="bg-n-2/30 dark:bg-n-8/50 rounded-xl p-4 border border-n-3/50 dark:border-n-6/50">
@@ -220,7 +230,28 @@ export default function ClientsPage() {
                     </td>
                     <td className="py-4 text-n-4">{lawyer.email}</td>
                     <td className="py-4 font-medium">
-                      {lawyer.lawFirm?.name || "Sem escritório"}
+                      {lawyer.lawFirm ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/offices?search=${encodeURIComponent(lawyer.lawFirm.name)}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary-1 hover:underline"
+                          >
+                            {lawyer.lawFirm.name}
+                          </Link>
+                          {lawyer.lawFirmId && (
+                            <Link
+                              href={`/subscriptions?lawFirmId=${lawyer.lawFirmId}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs text-n-4 hover:text-primary-1"
+                            >
+                              Ver assinatura
+                            </Link>
+                          )}
+                        </span>
+                      ) : (
+                        "Sem escritório"
+                      )}
                     </td>
                     <td className="py-4">
                       <span

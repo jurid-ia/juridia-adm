@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SortableHeader } from "@/components/ui/SortableHeader";
 import { useApiContext } from "@/context/ApiContext";
 import { partnerService } from "@/services/partner/partnerService";
-import { Filter, Search, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { DebouncedSearchInput } from "@/components/ui/DebouncedSearchInput";
+import { Filter, X } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import PartnerModal from "./_components/PartnerModal";
 
@@ -20,9 +22,8 @@ export default function PartnersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | undefined>(undefined);
 
-  // Pagination & Search State
+  // Pagination & Search State (search fica só no DebouncedSearchInput para evitar re-render da página a cada tecla)
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
   // Filter State
@@ -38,14 +39,10 @@ export default function PartnersPage() {
     limit: 20,
   });
 
-  // Debounce search
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1); // Reset to page 1 on search
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [search]);
+  const handleDebouncedSearch = useCallback((value: string) => {
+    setDebouncedSearch(value);
+    setPage(1);
+  }, []);
 
   // Load data when page, debouncedSearch, filter or sort changes
   useEffect(() => {
@@ -121,17 +118,12 @@ export default function PartnersPage() {
         </Button>
       </div>
 
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-n-4" />
-        <input
-          type="text"
-          placeholder="Buscar parceiro por nome, email ou código..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 rounded-lg border border-n-3 dark:border-n-6 bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/50"
-        />
-      </div>
+      {/* Search Input: estado local no componente evita re-render da página a cada tecla */}
+      <DebouncedSearchInput
+        placeholder="Buscar parceiro por nome, email ou código..."
+        onDebouncedChange={handleDebouncedSearch}
+        delay={500}
+      />
 
       {/* Filters */}
       <div className="bg-n-2/30 dark:bg-n-8/50 rounded-xl p-4 border border-n-3/50 dark:border-n-6/50">
@@ -216,7 +208,14 @@ export default function PartnersPage() {
                         {partner.isActive ? "Ativo" : "Inativo"}
                       </span>
                     </td>
-                    <td className="flex gap-2 py-4">
+                    <td className="flex flex-wrap items-center gap-2 py-4">
+                      <Link
+                        href={`/subscriptions?partnerId=${partner.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-n-4 hover:text-primary-1"
+                      >
+                        Ver assinaturas
+                      </Link>
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();

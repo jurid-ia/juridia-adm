@@ -2,11 +2,29 @@
 
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useApiContext } from "@/context/ApiContext";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { Subscription, subscriptionService } from "@/services/subscription/subscriptionService";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+
+/** Retorna YYYY-MM-DD em UTC (para datas vindas da API, que vêm em UTC). */
+function toUTCYYYYMMDD(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Retorna YYYY-MM-DD em horário local (para data escolhida no calendário). */
+function toLocalYYYYMMDD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 type SubscriptionDetailsModalProps = {
   isOpen: boolean;
@@ -25,12 +43,79 @@ export default function SubscriptionDetailsModal({
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [newExpirationDate, setNewExpirationDate] = useState("");
+  const [savingExpiration, setSavingExpiration] = useState(false);
+  const [treatAsPaidLocal, setTreatAsPaidLocal] = useState(false);
+  const [savingTreatAsPaid, setSavingTreatAsPaid] = useState(false);
+
+  const isTrial = subscription?.paymentId?.startsWith("trial") ?? false;
+
+  const currentExpirationUtc =
+    isTrial && subscription?.expirationDate
+      ? toUTCYYYYMMDD(new Date(subscription.expirationDate))
+      : "";
+  const isSameExpirationDate =
+    !!newExpirationDate && newExpirationDate === currentExpirationUtc;
+  const canSaveNewExpiration =
+    !!newExpirationDate && !isSameExpirationDate && !savingExpiration;
 
   useEffect(() => {
     if (isOpen && subscription) {
       loadHistory();
+      setTreatAsPaidLocal(subscription.treatAsPaid ?? false);
+      if (isTrial && subscription.expirationDate) {
+        const expUtc = toUTCYYYYMMDD(new Date(subscription.expirationDate));
+        const todayUtc = toUTCYYYYMMDD(new Date());
+        setNewExpirationDate(expUtc >= todayUtc ? expUtc : todayUtc);
+      }
     }
-  }, [isOpen, subscription]);
+  }, [isOpen, subscription, isTrial]);
+
+  const handleTreatAsPaidChange = async (checked: boolean | "indeterminate") => {
+    if (!subscription || checked === "indeterminate") return;
+    setSavingTreatAsPaid(true);
+    try {
+      await subscriptionService.updateTreatAsPaid(api, subscription.id, checked === true);
+      setTreatAsPaidLocal(checked === true);
+      toast.success(checked ? "Marcado como tratado como pago." : "Desmarcado.");
+      onRefresh();
+    } catch (error) {
+      toast.error("Erro ao atualizar.");
+    } finally {
+      setSavingTreatAsPaid(false);
+    }
+  };
+
+  const addDaysToExpiration = (days: number) => {
+    if (!newExpirationDate) return;
+    const d = new Date(newExpirationDate + "T12:00:00.000Z");
+    d.setUTCDate(d.getUTCDate() + days);
+    setNewExpirationDate(toUTCYYYYMMDD(d));
+  };
+
+  const handleUpdateExpiration = async () => {
+    if (!subscription || !newExpirationDate) return;
+    const todayUtc = toUTCYYYYMMDD(new Date());
+    if (newExpirationDate < todayUtc) {
+      toast.error("Selecione uma data futura.");
+      return;
+    }
+    setSavingExpiration(true);
+    try {
+      await subscriptionService.updateExpiration(
+        api,
+        subscription.id,
+        new Date(newExpirationDate).toISOString(),
+      );
+      toast.success("Data de expiração atualizada!");
+      onRefresh();
+      onClose();
+    } catch (error) {
+      toast.error("Erro ao atualizar data de expiração");
+    } finally {
+      setSavingExpiration(false);
+    }
+  };
 
   const loadHistory = async () => {
     if (!subscription) return;
@@ -159,7 +244,7 @@ export default function SubscriptionDetailsModal({
                     </div>
                 )}
 
-                {(subscription.status === 'CANCELED' || subscription.status === 'INACTIVE' || subscription.status === 'OVERDUE') && (
+                {(subscription.status === 'CANCELED' || subscription.status === 'INACTIVE' || subscription.status === 'OVERDUE') && !isTrial && (
                     <div className="flex gap-2 mt-2">
                          {subscription.yearly ? (
                             <Button 
@@ -181,6 +266,84 @@ export default function SubscriptionDetailsModal({
                              </Button>
                          )}
                     </div>
+                )}
+
+                {isTrial && (
+                  <div className="mt-4 pt-4 border-t border-n-3/50 dark:border-n-6/50">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Checkbox
+                        id="treat-as-paid"
+                        checked={treatAsPaidLocal}
+                        onCheckedChange={handleTreatAsPaidChange}
+                        disabled={savingTreatAsPaid}
+                      />
+                      <label
+                        htmlFor="treat-as-paid"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        Trial extendido
+                      </label>
+                      {savingTreatAsPaid && (
+                        <span className="text-xs text-n-4">Salvando...</span>
+                      )}
+                    </div>
+                    <h4 className="font-semibold text-sm mb-2">Prorrogar trial</h4>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="flex flex-col">
+
+                        <label className="text-sm text-n-4">Nova data de expiração:</label>
+                        <DatePicker
+                          value={newExpirationDate}
+                          onChange={(d) =>
+                            setNewExpirationDate(d ? toLocalYYYYMMDD(d) : "")
+                          }
+                          minDate={new Date()}
+                          placeholder="Nova data de expiração"
+                          className="min-w-[180px]"
+                        />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-9 text-xs"
+                          onClick={() => addDaysToExpiration(7)}
+                        >
+                          +7 dias
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-9 text-xs"
+                          onClick={() => addDaysToExpiration(14)}
+                        >
+                          +14 dias
+                        </Button>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Button
+                          variant={canSaveNewExpiration ? "blue" : "secondary"}
+                          className={cn(
+                            "h-9 text-xs w-fit transition-colors",
+                            canSaveNewExpiration
+                              ? "bg-primary-1 hover:bg-primary-1/90 text-white"
+                              : "opacity-60 cursor-not-allowed"
+                          )}
+                          onClick={handleUpdateExpiration}
+                          disabled={!canSaveNewExpiration}
+                        >
+                          {savingExpiration
+                            ? "Salvando..."
+                            : "Salvar nova data"}
+                        </Button>
+                        {isSameExpirationDate && (
+                          <span className="text-xs text-n-4 dark:text-n-3">
+                            Altere a data acima para poder salvar.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
             </div>
         )}

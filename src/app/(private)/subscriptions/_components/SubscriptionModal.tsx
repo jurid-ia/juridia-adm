@@ -132,7 +132,7 @@ export default function SubscriptionModal({
         <div className="flex flex-col gap-2">
             <label className="base2 font-semibold flex">Plano</label>
             <Combobox
-                options={plans.map(p => ({ value: p.id, label: `${p.name} - R$ ${p.pixPrice}` }))}
+                options={plans.map(p => ({ value: p.id, label: `${p.name}` }))}
                 value={selectedPlanId}
                 onChange={setSelectedPlanId}
                 placeholder="Selecione um plano"
