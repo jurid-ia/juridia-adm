@@ -2,16 +2,17 @@
 
 import { Office } from "@/@types/admin";
 import { Button } from "@/components/ui/button";
+import { DebouncedSearchInput } from "@/components/ui/DebouncedSearchInput";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SortableHeader } from "@/components/ui/SortableHeader";
 import { useApiContext } from "@/context/ApiContext";
+import { cn } from "@/lib/utils";
 import { adminService } from "@/services/admin/adminService";
-import { DebouncedSearchInput } from "@/components/ui/DebouncedSearchInput";
 import { Filter, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import OfficeModal from "./_components/OfficeModal";
 
@@ -153,7 +154,7 @@ export default function OfficesPage() {
         </div>
       </div>
 
-      <div className="bg-n-1 dark:bg-n-8 rounded-xl p-6 shadow-sm overflow-x-auto">
+      <div className="bg-n-1 dark:bg-n-8 rounded-xl shadow-sm overflow-x-auto">
         {loading ? (
           <div>Carregando...</div>
         ) : (
@@ -165,7 +166,6 @@ export default function OfficesPage() {
                   <th className="pb-4 font-semibold">CPF/CNPJ</th>
                   <th className="pb-4 font-semibold">Localização</th>
                   <th className="pb-4 font-semibold">Advogados</th>
-                  <th className="pb-4 font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,7 +179,9 @@ export default function OfficesPage() {
                     <td className="py-4 text-n-7 dark:text-n-1">
                       {office.cnpj ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] uppercase bg-n-2 dark:bg-n-7 px-1.5 py-0.5 rounded font-semibold">
+                          <span className={cn("text-[10px] uppercase bg-n-2 dark:bg-n-7 px-1.5 py-0.5 rounded font-semibold",
+                            office.paymentType === "CPF" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                          )}>
                             {office.paymentType === "CPF" ? "CPF" : "CNPJ"}
                           </span>
                           <span>{office.cnpj}</span>
@@ -189,7 +191,7 @@ export default function OfficesPage() {
                       )}
                     </td>
                     <td className="py-4 text-n-4">{office.address}, {office.number}</td>
-                    <td className="py-4 font-medium">
+                    <td className="py-4 flex flex-col font-medium">
                       <Link
                         href={`/clients?lawFirmId=${office.id}`}
                         onClick={(e) => e.stopPropagation()}
@@ -197,16 +199,13 @@ export default function OfficesPage() {
                       >
                         {office._count?.lawyers ?? 0} advogado(s)
                       </Link>
-                    </td>
-                    <td className="py-4 flex flex-wrap items-center gap-2">
                         <Link
                           href={`/subscriptions?lawFirmId=${office.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="text-xs text-n-4 hover:text-primary-1"
+                          className="text-xs w-max text-n-4 hover:text-primary-1"
                         >
                           Ver assinatura
                         </Link>
-                        <Button onClick={(e) => { e.stopPropagation(); handleEdit(office); }} variant="secondary" className="h-8 px-3 text-xs">Editar</Button>
                     </td>
                   </tr>
                 ))}

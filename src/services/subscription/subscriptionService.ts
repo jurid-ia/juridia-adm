@@ -140,6 +140,19 @@ export const subscriptionService = {
     return handleResponse(res);
   },
 
+  updateStatus: async (
+    api: ApiContextType,
+    id: string,
+    status: 'ACTIVE' | 'INACTIVE',
+  ): Promise<Subscription> => {
+    const res = await api.PatchAPI(
+      `/admin/signature/${id}`,
+      { status },
+      true,
+    );
+    return handleResponse(res);
+  },
+
   generateReceipt: async (api: ApiContextType, subscriptionId: string): Promise<void> => {
       // Now returns JSON { base64: string, filename: string }
       const res = await api.GetAPI(`/admin/signature/${subscriptionId}/receipt`, true);

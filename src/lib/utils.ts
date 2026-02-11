@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
 export const formatDate = (date: string | number | Date): string => {
   const options: Intl.DateTimeFormatOptions = {
     year: "numeric",
-    month: "long",
+    month: "numeric",
     day: "numeric",
     timeZone: "UTC", // Evita conversão de timezone que causa dia anterior
   };

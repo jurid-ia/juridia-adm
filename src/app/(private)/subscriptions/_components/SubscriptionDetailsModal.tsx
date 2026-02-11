@@ -4,10 +4,18 @@ import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useApiContext } from "@/context/ApiContext";
 import { cn, formatDate } from "@/lib/utils";
 import { Subscription, subscriptionService } from "@/services/subscription/subscriptionService";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 
 /** Retorna YYYY-MM-DD em UTC (para datas vindas da API, que vêm em UTC). */
@@ -47,8 +55,20 @@ export default function SubscriptionDetailsModal({
   const [savingExpiration, setSavingExpiration] = useState(false);
   const [treatAsPaidLocal, setTreatAsPaidLocal] = useState(false);
   const [savingTreatAsPaid, setSavingTreatAsPaid] = useState(false);
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [statusConfirm, setStatusConfirm] = useState<{
+    open: boolean;
+    newStatus: "ACTIVE" | "INACTIVE" | null;
+  }>({ open: false, newStatus: null });
+  /** Atualização otimista do status para o dropdown refletir na hora (e quando a assinatura sai da lista por filtro) */
+  const [statusLocal, setStatusLocal] = useState<"ACTIVE" | "INACTIVE" | null>(null);
 
   const isTrial = subscription?.paymentId?.startsWith("trial") ?? false;
+
+  /** Status exibido no dropdown: valor local (após alteração) ou derivado da subscription */
+  const displayStatus = (statusLocal ?? (subscription?.status === "ACTIVE" ? "ACTIVE" : "INACTIVE")) as "ACTIVE" | "INACTIVE";
+  /** Status efetivo para ações (botões): reflete alteração otimista */
+  const effectiveStatus = statusLocal ?? subscription?.status;
 
   const currentExpirationUtc =
     isTrial && subscription?.expirationDate
@@ -63,6 +83,7 @@ export default function SubscriptionDetailsModal({
     if (isOpen && subscription) {
       loadHistory();
       setTreatAsPaidLocal(subscription.treatAsPaid ?? false);
+      setStatusLocal(null); // sincronizar com a subscription ao abrir ou quando o parent atualiza
       if (isTrial && subscription.expirationDate) {
         const expUtc = toUTCYYYYMMDD(new Date(subscription.expirationDate));
         const todayUtc = toUTCYYYYMMDD(new Date());
@@ -182,6 +203,46 @@ export default function SubscriptionDetailsModal({
     }
   };
 
+  const openStatusConfirm = (newStatus: "ACTIVE" | "INACTIVE") => {
+    setStatusConfirm({ open: true, newStatus });
+  };
+
+  const closeStatusConfirm = () => {
+    setStatusConfirm({ open: false, newStatus: null });
+  };
+
+  const handleStatusConfirmAction = async () => {
+    if (!subscription || !statusConfirm.newStatus) return;
+    const newStatus = statusConfirm.newStatus;
+    const isActivate = newStatus === "ACTIVE";
+    setStatusUpdateLoading(true);
+    closeStatusConfirm();
+    try {
+      await subscriptionService.updateStatus(api, subscription.id, newStatus);
+      setStatusLocal(newStatus); // refletir no dropdown imediatamente
+      toast.success(
+        isActivate ? "Assinatura ativada com sucesso." : "Assinatura desativada."
+      );
+      onRefresh();
+    } catch (error) {
+      toast.error("Erro ao alterar status da assinatura.");
+    } finally {
+      setStatusUpdateLoading(false);
+    }
+  };
+
+  const handleStatusChange = (newValue: string) => {
+    if (!subscription || statusUpdateLoading) return;
+    const newStatus = newValue as "ACTIVE" | "INACTIVE";
+    if (newStatus === displayStatus) return;
+    // Desativar só pelo botão "Cancelar Assinatura" (cancela no gateway)
+    if (newStatus === "INACTIVE") {
+      toast.error("Para desativar, use o botão \"Cancelar Assinatura\" abaixo.");
+      return;
+    }
+    openStatusConfirm(newStatus);
+  };
+
   const translateStatus = (status: string) => {
       const map: Record<string, string> = {
           'ACTIVE': 'Ativa',
@@ -206,23 +267,51 @@ export default function SubscriptionDetailsModal({
       }
   };
 
+  const statusConfirmNewStatus = statusConfirm.newStatus;
+  const isActivateConfirm = statusConfirmNewStatus === "ACTIVE";
+  const confirmMessage =
+    statusConfirm.open && statusConfirmNewStatus
+      ? isActivateConfirm
+        ? "Deseja realmente ativar esta assinatura?"
+        : "Deseja realmente desativar esta assinatura?"
+      : "";
+
   return (
-    <Modal
-      visible={isOpen}
-      onClose={onClose}
-      title="Detalhes e Histórico"
-      classWrap="max-w-2xl"
-    >
-      <div className="flex flex-col gap-6">
+    <>
+      <Modal
+        visible={isOpen}
+        onClose={onClose}
+        title="Detalhes e Histórico"
+        classWrap="max-w-2xl"
+      >
+        <div className="flex flex-col gap-6">
         {subscription && (
             <div className="bg-n-2 dark:bg-n-6 p-4 rounded-xl flex flex-col gap-2">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center gap-3 flex-wrap">
                     <span className="font-semibold text-lg">{subscription.lawFirm?.name}</span>
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        subscription.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                    }`}>
-                        {translateStatus(subscription.status)}
-                    </span>
+                    <Select
+                      value={displayStatus}
+                      onValueChange={handleStatusChange}
+                      disabled={statusUpdateLoading}
+                    >
+                      <SelectTrigger className={cn(
+                        "w-[130px] h-9 text-xs font-bold border-2",
+                        displayStatus === "ACTIVE"
+                          ? "bg-green-500 border-green-600 text-white hover:bg-green-600 dark:bg-green-600 dark:border-green-700"
+                          : "bg-red-500 border-red-600 text-white hover:bg-red-600 dark:bg-red-600 dark:border-red-700"
+                      )}>
+                        <SelectValue>
+                          {displayStatus === "ACTIVE" ? "Ativa" : "Inativa"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE">Ativa</SelectItem>
+                        {/* Opção "Inativa" só aparece quando já está inativa (exibir estado). Desativar de fato é só via "Cancelar Assinatura". */}
+                        {displayStatus === "INACTIVE" && (
+                          <SelectItem value="INACTIVE">Inativa</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                 </div>
                 <div className="text-sm text-n-4">
                     <p>Plano: {subscription.signaturePlan?.name}</p>
@@ -231,7 +320,7 @@ export default function SubscriptionDetailsModal({
                     {/* {subscription.paymentId && <p className="text-xs mt-1">Ref Pagamento: {subscription.paymentId}</p>} */}
                 </div>
                 
-                {subscription.status === 'ACTIVE' && (
+                {effectiveStatus === 'ACTIVE' && (
                     <div className="flex gap-2 mt-2">
                          <Button 
                             variant="red" 
@@ -244,7 +333,7 @@ export default function SubscriptionDetailsModal({
                     </div>
                 )}
 
-                {(subscription.status === 'CANCELED' || subscription.status === 'INACTIVE' || subscription.status === 'OVERDUE') && !isTrial && (
+                {(effectiveStatus === 'CANCELED' || effectiveStatus === 'INACTIVE' || effectiveStatus === 'OVERDUE') && !isTrial && (
                     <div className="flex gap-2 mt-2">
                          {subscription.yearly ? (
                             <Button 
@@ -403,5 +492,59 @@ export default function SubscriptionDetailsModal({
       </div>
       </div>
     </Modal>
+
+      {statusConfirm.open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="status-confirm-title"
+          >
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              aria-hidden
+            />
+            <div
+              className={cn(
+                "relative z-10 flex flex-col gap-4 rounded-xl border-2 border-n-3 dark:border-n-6 bg-n-1 dark:bg-n-6 p-5 shadow-xl",
+                "min-w-[280px] max-w-[90vw] animate-in fade-in zoom-in-95 duration-200"
+              )}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 id="status-confirm-title" className="text-base font-semibold text-n-7 dark:text-n-2">
+                Alterar status
+              </h3>
+              <p className="text-sm text-n-6 dark:text-n-3">{confirmMessage}</p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 text-sm"
+                  onClick={closeStatusConfirm}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant={isActivateConfirm ? "blue" : "red"}
+                  size="sm"
+                  className={cn(
+                    "h-9 text-sm text-white",
+                    isActivateConfirm
+                      ? "bg-primary-1 hover:bg-primary-1/90"
+                      : "bg-red-600 hover:bg-red-700"
+                  )}
+                  onClick={handleStatusConfirmAction}
+                  disabled={statusUpdateLoading}
+                >
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }

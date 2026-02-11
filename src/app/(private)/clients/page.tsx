@@ -2,16 +2,16 @@
 
 import { Lawyer, Office } from "@/@types/admin";
 import { Button } from "@/components/ui/button";
+import { DebouncedSearchInput } from "@/components/ui/DebouncedSearchInput";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SortableHeader } from "@/components/ui/SortableHeader";
 import { useApiContext } from "@/context/ApiContext";
 import { adminService } from "@/services/admin/adminService";
-import { DebouncedSearchInput } from "@/components/ui/DebouncedSearchInput";
 import { Filter, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import ClientModal from "./_components/ClientModal";
 
@@ -203,7 +203,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-n-1 p-6 shadow-sm dark:bg-n-8">
+      <div className="overflow-x-auto rounded-xl bg-n-1 shadow-sm dark:bg-n-8">
         {loading ? (
           <div>Carregando...</div>
         ) : (
@@ -215,7 +215,6 @@ export default function ClientsPage() {
                   <SortableHeader label="Email" sortKey="email" currentSort={sort} onSort={handleSort} />
                   <th className="pb-4 font-semibold">Escritório</th>
                   <SortableHeader label="Role" sortKey="role" currentSort={sort} onSort={handleSort} />
-                  <th className="pb-4 font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -223,7 +222,7 @@ export default function ClientsPage() {
                   <tr
                     key={lawyer.id}
                     onClick={() => handleEdit(lawyer)}
-                    className="cursor-pointer border-b border-n-3/50 transition-colors hover:bg-n-2/50 dark:border-n-6/50 dark:hover:bg-n-6/50"
+                    className="cursor-pointer gap-2 border-b border-n-3/50 transition-colors hover:bg-n-2/50 dark:border-n-6/50 dark:hover:bg-n-6/50"
                   >
                     <td className="py-4 font-semibold text-n-7 dark:text-n-1">
                       {lawyer.name}
@@ -231,7 +230,7 @@ export default function ClientsPage() {
                     <td className="py-4 text-n-4">{lawyer.email}</td>
                     <td className="py-4 font-medium">
                       {lawyer.lawFirm ? (
-                        <span className="flex flex-wrap items-center gap-2">
+                        <span className="flex flex-col flex-wrap gap-2">
                           <Link
                             href={`/offices?search=${encodeURIComponent(lawyer.lawFirm.name)}`}
                             onClick={(e) => e.stopPropagation()}
@@ -243,7 +242,7 @@ export default function ClientsPage() {
                             <Link
                               href={`/subscriptions?lawFirmId=${lawyer.lawFirmId}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="text-xs text-n-4 hover:text-primary-1"
+                              className="text-xs w-max text-n-4 hover:text-primary-1"
                             >
                               Ver assinatura
                             </Link>
@@ -263,18 +262,6 @@ export default function ClientsPage() {
                       >
                         {lawyer.role}
                       </span>
-                    </td>
-                    <td className="flex gap-2 py-4">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(lawyer);
-                        }}
-                        variant="secondary"
-                        className="h-8 px-3 text-xs"
-                      >
-                        Editar
-                      </Button>
                     </td>
                   </tr>
                 ))}

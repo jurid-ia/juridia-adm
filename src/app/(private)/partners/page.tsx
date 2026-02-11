@@ -3,12 +3,12 @@
 
 import { Partner } from "@/@types/admin";
 import { Button } from "@/components/ui/button";
+import { DebouncedSearchInput } from "@/components/ui/DebouncedSearchInput";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SortableHeader } from "@/components/ui/SortableHeader";
 import { useApiContext } from "@/context/ApiContext";
 import { partnerService } from "@/services/partner/partnerService";
-import { DebouncedSearchInput } from "@/components/ui/DebouncedSearchInput";
 import { Filter, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -160,7 +160,7 @@ export default function PartnersPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-n-1 p-6 shadow-sm dark:bg-n-8">
+      <div className="overflow-x-auto rounded-xl bg-n-1 shadow-sm dark:bg-n-8">
         {loading ? (
           <div>Carregando...</div>
         ) : (
@@ -175,7 +175,6 @@ export default function PartnersPage() {
                   <th className="pb-4 font-semibold">Desconto</th>
                   <th className="pb-4 font-semibold">Wallet ID</th>
                   <th className="pb-4 font-semibold">Status</th>
-                  <th className="pb-4 font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -197,9 +196,9 @@ export default function PartnersPage() {
                     <td className="py-4 text-xs text-n-4 font-mono">
                       {partner.walletId?.substring(0, 8) || '****'}****
                     </td>
-                    <td className="py-4">
+                    <td className="py-4 flex flex-col">
                       <span
-                        className={`rounded px-2 py-1 text-xs font-medium ${
+                        className={`rounded w-max px-2 py-1 text-xs font-medium ${
                           partner.isActive
                             ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                             : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -207,25 +206,13 @@ export default function PartnersPage() {
                       >
                         {partner.isActive ? "Ativo" : "Inativo"}
                       </span>
-                    </td>
-                    <td className="flex flex-wrap items-center gap-2 py-4">
                       <Link
                         href={`/subscriptions?partnerId=${partner.id}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="text-xs text-n-4 hover:text-primary-1"
+                        className="text-xs text-n-4 w-max hover:text-primary-1"
                       >
                         Ver assinaturas
                       </Link>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(partner);
-                        }}
-                        variant="secondary"
-                        className="h-8 px-3 text-xs"
-                      >
-                        Editar
-                      </Button>
                     </td>
                   </tr>
                 ))}

@@ -87,7 +87,36 @@ export default function SubscriptionsPage() {
     loadData();
   }, [page, debouncedSearch, statusFilter, paymentTypeFilter, yearlyFilter, partnerFilter, lawFirmIdFilter, sort]);
 
-  const loadData = async () => {
+  // Manter viewingSub em sync com a lista após refresh (ex.: alteração de status na modal)
+  useEffect(() => {
+    if (!viewingSub) return;
+    const updated = subscriptions.find((s) => s.id === viewingSub.id);
+    if (updated) setViewingSub(updated);
+  }, [subscriptions]);
+
+  // Ao criar cliente completo pelo fluxo (Layout), atualizar lista e opcionalmente abrir a nova assinatura
+  useEffect(() => {
+    const handler = (e: CustomEvent<{ subscriptionId?: string }>) => {
+      const subscriptionId = e.detail?.subscriptionId;
+      loadData().then((list) => {
+        if (list && subscriptionId) {
+          const sub = list.find((s) => s.id === subscriptionId);
+          if (sub) setViewingSub(sub);
+        }
+      });
+    };
+    window.addEventListener(
+      "jurid_adm:subscriptions-changed",
+      handler as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        "jurid_adm:subscriptions-changed",
+        handler as EventListener
+      );
+  }, [page, debouncedSearch, statusFilter, paymentTypeFilter, yearlyFilter, partnerFilter, lawFirmIdFilter, sort]);
+
+  const loadData = async (): Promise<Subscription[] | void> => {
     setLoading(true);
     try {
       const params: any = {
@@ -97,7 +126,7 @@ export default function SubscriptionsPage() {
         sortBy: sort.by,
         sortOrder: sort.order,
       };
-      
+
       // Add filters if selected (skip "ALL")
       if (statusFilter && statusFilter !== "ALL") params.status = statusFilter;
       if (paymentTypeFilter && paymentTypeFilter !== "ALL") params.paymentType = paymentTypeFilter;
@@ -108,6 +137,7 @@ export default function SubscriptionsPage() {
       const response = await subscriptionService.getSubscriptions(api, params);
       setSubscriptions(response.data);
       setMeta(response.meta);
+      return response.data;
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar assinaturas");
@@ -262,12 +292,12 @@ export default function SubscriptionsPage() {
         </div>
       </div>
 
-      <div className="bg-n-1 dark:bg-n-8 rounded-xl p-6 shadow-sm overflow-x-auto">
+      <div className="bg-n-1 dark:bg-n-8 rounded-xl shadow-sm overflow-x-auto">
         {loading ? (
           <div>Carregando...</div>
         ) : (
           <>
-            <table className="w-full text-left">
+            <table className="w-full">
               <thead>
                 <tr className="border-b border-n-3 dark:border-n-6 text-n-4">
                   <SortableHeader label="Escritório" sortKey="lawFirm" currentSort={sort} onSort={handleSort} />
@@ -276,7 +306,6 @@ export default function SubscriptionsPage() {
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} onSort={handleSort} />
                   <SortableHeader label="Validade" sortKey="expirationDate" currentSort={sort} onSort={handleSort} />
                   <th className="pb-4 font-semibold">Valor</th>
-                  <th className="pb-4 font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -349,17 +378,6 @@ export default function SubscriptionsPage() {
                           const discounted = total * (1 - partnerDiscount / 100);
                           return discounted.toFixed(2);
                       })()}
-                    </td>
-                    <td className="py-4">
-                        <div className="flex gap-2">
-                          <Button 
-                              variant="secondary" 
-                              className="h-8 px-3 text-xs"
-                              onClick={(e) => handleDetails(e, sub)}
-                          >
-                              Detalhes
-                          </Button>
-                        </div>
                     </td>
                   </tr>
                 ))}

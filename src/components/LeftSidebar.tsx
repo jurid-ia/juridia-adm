@@ -12,6 +12,7 @@ import {
   Menu,
   Moon,
   Sun,
+  UserPlus,
   Users
 } from "lucide-react";
 import { useCookies } from "next-client-cookies";
@@ -23,9 +24,10 @@ import { twMerge } from "tailwind-merge";
 type LeftSidebarProps = {
   value: boolean;
   setValue?: any;
+  onOpenCreateClientFlow?: () => void;
 };
 
-const LeftSidebar = ({ value, setValue }: LeftSidebarProps) => {
+const LeftSidebar = ({ value, setValue, onOpenCreateClientFlow }: LeftSidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const cookies = useCookies();
@@ -54,6 +56,11 @@ const LeftSidebar = ({ value, setValue }: LeftSidebarProps) => {
 
   const navigation = [
     {
+      title: "Escritórios",
+      icon: Building2,
+      url: "/offices",
+    },
+    {
       title: "Clientes",
       icon: Users,
       url: "/clients",
@@ -68,11 +75,6 @@ const LeftSidebar = ({ value, setValue }: LeftSidebarProps) => {
     //   icon: FileText,
     //   url: "/fiscal",
     // },
-    {
-      title: "Escritórios",
-      icon: Building2,
-      url: "/offices",
-    },
     {
       title: "Parceiros",
       icon: Handshake, 
@@ -132,6 +134,21 @@ const LeftSidebar = ({ value, setValue }: LeftSidebarProps) => {
 
       <div className="mt-6 w-full grow overflow-y-auto scroll-smooth scrollbar-none">
         <div className="flex flex-col gap-2">
+          {onOpenCreateClientFlow && (
+            <button
+              type="button"
+              onClick={onOpenCreateClientFlow}
+              className={cn(
+                "flex h-12 mb-10 items-center rounded-lg bg-n-7 text-n-1 transition-colors hover:bg-n-8 hover:text-n-7 dark:text-n-3 dark:hover:bg-n-8/50 dark:hover:text-n-1",
+                value ? "justify-center px-0" : "px-4"
+              )}
+            >
+              <UserPlus className={cn("w-6 h-6", value ? "mr-0" : "mr-4")} />
+              {!value && (
+                <span className="base2 font-semibold">Novo cliente completo</span>
+              )}
+            </button>
+          )}
           {navigation.map((item, index) => (
             <Link
               key={index}
