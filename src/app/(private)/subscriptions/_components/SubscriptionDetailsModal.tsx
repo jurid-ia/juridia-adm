@@ -520,7 +520,6 @@ export default function SubscriptionDetailsModal({
               <div className="flex gap-2 justify-end">
                 <Button
                   variant="secondary"
-                  size="sm"
                   className="h-9 text-sm"
                   onClick={closeStatusConfirm}
                 >
@@ -528,7 +527,6 @@ export default function SubscriptionDetailsModal({
                 </Button>
                 <Button
                   variant={isActivateConfirm ? "blue" : "red"}
-                  size="sm"
                   className={cn(
                     "h-9 text-sm text-white",
                     isActivateConfirm
