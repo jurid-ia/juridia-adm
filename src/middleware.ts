@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTokenCookieName } from "@/lib/auth-cookies";
 
 export async function middleware(req: NextRequest) {
+  
   // Public routes that don't need auth
   const publicRoutes = ["/sign-in"];
   const isPublicRoute = publicRoutes.some((route) =>
