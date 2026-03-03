@@ -4,6 +4,11 @@ import axios, { AxiosInstance } from "axios";
 import { useCookies } from "next-client-cookies";
 import { createContext, useContext, useMemo, useState } from "react";
 
+import {
+  getTokenCookieName,
+  getTokenCookieOptions,
+} from "@/lib/auth-cookies";
+
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 
 interface ApiContextProps {
@@ -43,42 +48,44 @@ interface ProviderProps {
 
 export const ApiContextProvider = ({ children }: ProviderProps) => {
   const cookies = useCookies();
-  const [token, setTokenState] = useState<string | undefined>(cookies.get("token"));
+  const tokenName = getTokenCookieName();
+  const [token, setTokenState] = useState<string | undefined>(
+    cookies.get(tokenName),
+  );
 
   // Criar axios instance uma única vez com useMemo
   const api: AxiosInstance = useMemo(() => {
     const instance = axios.create({ baseURL });
-    
+
     // Interceptor para lidar com token expirado (401)
     instance.interceptors.response.use(
-      response => response,
-      error => {
+      (response) => response,
+      (error) => {
         if (error.response?.status === 401) {
-          cookies.remove("token");
-          if (typeof window !== 'undefined') {
-            window.location.href = '/auth/signin';
+          cookies.remove(getTokenCookieName());
+          if (typeof window !== "undefined") {
+            window.location.href = "/sign-in";
           }
         }
         return Promise.reject(error);
-      }
+      },
     );
-    
+
     return instance;
-  }, []);
+  }, [cookies]);
 
   const setToken = (newToken: string) => {
     setTokenState(newToken);
-    // Cookie com configurações de segurança
-    cookies.set("token", newToken, {
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/'
+    const options = getTokenCookieOptions();
+    cookies.set(getTokenCookieName(), newToken, {
+      ...options,
+      secure: process.env.NODE_ENV === "production",
     });
   };
 
   function config(auth: boolean) {
     // Sempre ler do cookie (source of truth única)
-    const currentToken = cookies.get("token");
+    const currentToken = cookies.get(tokenName);
     return {
       headers: {
         Authorization: auth ? `Bearer ${currentToken}` : "",

@@ -17,6 +17,7 @@ import {
     SigninValidationData,
     SigninValidationSchema,
 } from "@/@schemas/signin";
+import { getTokenCookieOptions } from "@/lib/auth-cookies";
 
 // ... imports
 
@@ -47,11 +48,12 @@ const SignInForm = ({}: SignInFormProps) => {
       const response = await authService.login(data);
       console.log("response: ", response)
       // response should contain { accessToken, user }
+      // setToken já grava o token no cookie com nome e opções persistentes (90 dias)
       setToken(response.accessToken);
-      cookies.set("token", response.accessToken);
 
       if (response.user) {
-        cookies.set("user", JSON.stringify(response.user));
+        const cookieOptions = getTokenCookieOptions();
+        cookies.set("user", JSON.stringify(response.user), cookieOptions);
       }
 
       toast.success(`Bem vindo, ${response.user?.name || "Admin"}`);

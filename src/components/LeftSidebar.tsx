@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useApiContext } from "@/context/ApiContext";
+import { getTokenCookieName } from "@/lib/auth-cookies";
 import { cn } from "@/lib/utils";
 import {
   Building2,
@@ -189,8 +190,7 @@ const LeftSidebar = ({ value, setValue, onOpenCreateClientFlow }: LeftSidebarPro
           )}
           onClick={() => {
             if (confirm("Tem certeza que deseja sair?")) {
-              cookies.remove("token");
-              // setToken(""); // Optional
+              cookies.remove(getTokenCookieName());
               router.push("/sign-in");
             }
           }}

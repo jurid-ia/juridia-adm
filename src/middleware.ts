@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getTokenCookieName } from "@/lib/auth-cookies";
+
 export async function middleware(req: NextRequest) {
   // Public routes that don't need auth
   const publicRoutes = ["/sign-in"];
@@ -11,8 +13,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for token
-  const token = req.cookies.get("token");
+  // Check for token (nome configurável via NEXT_PUBLIC_USER_TOKEN)
+  const tokenName = getTokenCookieName();
+  const token = req.cookies.get(tokenName);
 
   if (!token) {
     // Redirect to login if no token

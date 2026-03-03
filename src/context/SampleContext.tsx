@@ -3,6 +3,8 @@
 import { useCookies } from "next-client-cookies";
 import { createContext, useContext } from "react";
 
+import { getTokenCookieName } from "@/lib/auth-cookies";
+
 interface SampleContextProps {
   token: string | undefined;
 }
@@ -16,7 +18,7 @@ interface ProviderProps {
 export const SampleContextProvider = ({ children }: ProviderProps) => {
   const cookies = useCookies();
 
-  const token = cookies.get("token");
+  const token = cookies.get(getTokenCookieName());
 
   return (
     <SampleContext.Provider
