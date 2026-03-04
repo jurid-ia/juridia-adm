@@ -14,12 +14,11 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 
 import {
-    SigninValidationData,
-    SigninValidationSchema,
+  SigninValidationData,
+  SigninValidationSchema,
 } from "@/@schemas/signin";
+import { Checkbox } from "@/components/ui/checkbox";
 import { getTokenCookieOptions } from "@/lib/auth-cookies";
-
-// ... imports
 
 type SignInFormProps = {
   // Add props if needed
@@ -37,22 +36,24 @@ const SignInForm = ({}: SignInFormProps) => {
     defaultValues: {
       email: "",
       password: "",
+      rememberMe: false,
     },
   });
 
   const onSubmit = async (data: SigninValidationData) => {
     setIsLoggingIn(true);
     try {
-      console.log("data: ", data)
-      // authService.login now expects the whole data object
-      const response = await authService.login(data);
-      console.log("response: ", response)
-      // response should contain { accessToken, user }
-      // setToken já grava o token no cookie com nome e opções persistentes (90 dias)
-      setToken(response.accessToken);
+      // Enviar apenas email e senha à API (não enviar rememberMe)
+      const response = await authService.login({
+        email: data.email,
+        password: data.password,
+      });
+      const rememberMe = data.rememberMe ?? true;
+      // Gravar token no cookie com duração conforme "Lembrar de mim" (90d ou 7d)
+      setToken(response.accessToken, rememberMe);
 
       if (response.user) {
-        const cookieOptions = getTokenCookieOptions();
+        const cookieOptions = getTokenCookieOptions(rememberMe);
         cookies.set("user", JSON.stringify(response.user), cookieOptions);
       }
 
@@ -115,12 +116,34 @@ const SignInForm = ({}: SignInFormProps) => {
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="rememberMe"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center gap-2 space-y-0">
+              <Checkbox
+                id="rememberMe"
+                checked={field.value ?? false}
+                onCheckedChange={(checked) =>
+                  field.onChange(checked === true)
+                }
+              />
+              <label
+                htmlFor="rememberMe"
+                className="text-sm font-medium leading-none text-n-4 dark:text-n-3 cursor-pointer"
+              >
+                Lembrar de mim
+              </label>
+            </FormItem>
+          )}
+        />
       </div>
 
       <button
         className="base2 mb-6 w-fit text-left text-secondary-1 transition-colors hover:text-secondary-1/90 md:mb-3"
         type="button"
-        onClick={() => toast("Funcionalidade de recuperação de senha (Mock)")}
+        // onClick={() => toast("Funcionalidade de recuperação de senha (Mock)")}
       >
         Esqueceu a senha?
       </button>

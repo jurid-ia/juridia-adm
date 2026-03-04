@@ -1,7 +1,10 @@
-import { SigninValidationData } from "@/@schemas/signin";
+// Payload enviado à API: apenas email e senha (não enviar rememberMe)
+interface LoginPayload {
+  email: string;
+  password: string;
+}
 
-// "Login" that hits the real backend
-async function login(data: SigninValidationData): Promise<any> {
+async function login(data: LoginPayload): Promise<any> {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/admin/login`,
@@ -10,7 +13,7 @@ async function login(data: SigninValidationData): Promise<any> {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ email: data.email, password: data.password }),
       },
     );
 
@@ -32,6 +35,22 @@ async function login(data: SigninValidationData): Promise<any> {
   }
 }
 
+/** Chamada opcional à API de logout (auditoria/uso futuro). Não bloqueia o fluxo de saída. */
+async function logout(accessToken: string): Promise<void> {
+  try {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/logout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  } catch {
+    // Ignora erro; logout no cliente segue normalmente
+  }
+}
+
 export const authService = {
   login,
+  logout,
 };

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useApiContext } from "@/context/ApiContext";
 import { getTokenCookieName } from "@/lib/auth-cookies";
 import { cn } from "@/lib/utils";
+import { authService } from "@/services/auth/authService";
 import {
   Building2,
   CreditCard,
@@ -32,7 +33,7 @@ const LeftSidebar = ({ value, setValue, onOpenCreateClientFlow }: LeftSidebarPro
   const router = useRouter();
   const pathname = usePathname();
   const cookies = useCookies();
-  const { setToken } = useApiContext();
+  const { clearToken } = useApiContext();
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -188,9 +189,11 @@ const LeftSidebar = ({ value, setValue, onOpenCreateClientFlow }: LeftSidebarPro
             `base2 flex h-12 w-full items-center rounded-lg font-semibold text-n-4 transition-colors hover:text-n-7 hover:bg-n-2 dark:text-n-3 dark:hover:text-n-1 dark:hover:bg-n-8`,
             value ? "justify-center" : "px-5",
           )}
-          onClick={() => {
+          onClick={async () => {
             if (confirm("Tem certeza que deseja sair?")) {
-              cookies.remove(getTokenCookieName());
+              const token = cookies.get(getTokenCookieName());
+              if (token) await authService.logout(token);
+              clearToken();
               router.push("/sign-in");
             }
           }}

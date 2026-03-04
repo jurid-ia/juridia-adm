@@ -35,7 +35,8 @@ interface ApiContextProps {
     url: string,
     auth: boolean,
   ) => Promise<{ status: number; body: any }>;
-  setToken: (token: string) => void;
+  setToken: (token: string, rememberMe?: boolean) => void;
+  clearToken: () => void;
 }
 
 export type ApiContextType = ApiContextProps;
@@ -57,12 +58,14 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
   const api: AxiosInstance = useMemo(() => {
     const instance = axios.create({ baseURL });
 
-    // Interceptor para lidar com token expirado (401)
+    // Interceptor 401: não tentar refresh; remover token/cookie, limpar estado e redirecionar para login
     instance.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
           cookies.remove(getTokenCookieName());
+          cookies.remove("user");
+          setTokenState(undefined);
           if (typeof window !== "undefined") {
             window.location.href = "/sign-in";
           }
@@ -74,13 +77,16 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
     return instance;
   }, [cookies]);
 
-  const setToken = (newToken: string) => {
+  const setToken = (newToken: string, rememberMe: boolean = true) => {
     setTokenState(newToken);
-    const options = getTokenCookieOptions();
-    cookies.set(getTokenCookieName(), newToken, {
-      ...options,
-      secure: process.env.NODE_ENV === "production",
-    });
+    const options = getTokenCookieOptions(rememberMe);
+    cookies.set(getTokenCookieName(), newToken, options);
+  };
+
+  const clearToken = () => {
+    setTokenState(undefined);
+    cookies.remove(getTokenCookieName());
+    cookies.remove("user");
   };
 
   function config(auth: boolean) {
@@ -193,6 +199,7 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
         PatchAPI,
         DeleteAPI,
         setToken,
+        clearToken,
       }}
     >
       {children}
